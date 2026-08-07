@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FFF5F7">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>喵热量 🐾</title>
+<style>
+:root{
+  --bg:#FFF5F7; --card:#FFFFFF; --ink:#6B4A56; --ink-soft:#A88390;
+  --pink:#F4A7BE; --pink-deep:#E87E9F; --pink-pale:#FCE4EC; --pink-faint:#FDF0F4;
+  --peach:#FFD9C0; --lilac:#E6DEF0; --mint:#D5EBD8; --danger:#E86A7A;
+  --hand: 255px 18px 225px 18px / 18px 225px 18px 255px;
+  --hand2: 18px 225px 18px 255px / 225px 18px 255px 18px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg); color:var(--ink); min-height:100vh;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));
+  overscroll-behavior-y:none;
+}
+button{font-family:inherit;border:none;background:none;color:inherit;cursor:pointer}
+input,textarea,select{font-family:inherit;font-size:16px;color:var(--ink)}
+.hidden{display:none!important}
+
+/* ---------- 顶部 ---------- */
+header{
+  padding:calc(14px + env(safe-area-inset-top)) 20px 6px;
+  display:flex;justify-content:space-between;align-items:baseline;
+}
+header .date{font-size:.85rem;color:var(--ink-soft);letter-spacing:.05em}
+header .cat-name{font-size:1.05rem;font-weight:700}
+
+/* ---------- 首页进度区 ---------- */
+.hero{padding:14px 20px 4px;text-align:center;position:relative}
+.mood{font-size:3.4rem;line-height:1.15;display:inline-block;transition:transform .3s}
+.mood.pop{animation:pop .5s ease}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.35) rotate(-8deg)}70%{transform:scale(.92)}100%{transform:scale(1)}}
+.remain-num{font-size:2.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.remain-num.over{color:var(--danger)}
+.remain-label{font-size:.85rem;color:var(--ink-soft);margin-top:2px}
+.bar-wrap{margin:16px 4px 6px;position:relative}
+.bar{
+  height:34px;background:var(--pink-pale);border:2.5px solid var(--ink);
+  border-radius:var(--hand);overflow:hidden;position:relative;
+  box-shadow:2px 3px 0 rgba(107,74,86,.12);
+}
+.bar-fill{
+  height:100%;width:0%;border-radius:inherit;
+  background:repeating-linear-gradient(-55deg,var(--pink) 0 12px,#F7B8CA 12px 24px);
+  transition:width .8s cubic-bezier(.34,1.3,.64,1);
+}
+.bar.over .bar-fill{background:repeating-linear-gradient(-55deg,var(--danger) 0 12px,#EF8290 12px 24px)}
+.bar-paws{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:center;padding:0 10px;pointer-events:none;font-size:.8rem;opacity:.5}
+.bar-meta{display:flex;justify-content:space-between;font-size:.78rem;color:var(--ink-soft);padding:2px 8px 0}
+
+/* ---------- 时间线 ---------- */
+.section-title{
+  margin:22px 20px 10px;font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:8px;
+}
+.section-title::after{content:"";flex:1;border-top:2px dashed var(--pink)}
+.timeline{padding:0 20px;display:flex;flex-direction:column;gap:10px}
+.meal-card{
+  background:var(--card);border:2px solid var(--ink);border-radius:var(--hand2);
+  padding:12px 16px;display:flex;align-items:center;gap:12px;
+  box-shadow:2px 3px 0 rgba(107,74,86,.10);
+}
+.meal-emoji{font-size:1.5rem}
+.meal-info{flex:1;min-width:0}
+.meal-name{font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meal-sub{font-size:.75rem;color:var(--ink-soft);margin-top:2px}
+.meal-kcal{font-weight:800;font-size:1.05rem;white-space:nowrap}
+.meal-del{color:var(--ink-soft);font-size:1.1rem;padding:4px 6px}
+.empty-tip{
+  margin:8px 20px;padding:26px;border:2px dashed var(--pink);border-radius:var(--hand);
+  text-align:center;color:var(--ink-soft);font-size:.85rem;line-height:1.9;
+}
+
+/* ---------- 记一餐大按钮 ---------- */
+.add-btn{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(92px + env(safe-area-inset-bottom));
+  background:var(--pink-deep);color:#fff;font-size:1.1rem;font-weight:800;
+  padding:15px 44px;border:2.5px solid var(--ink);border-radius:var(--hand);
+  box-shadow:3px 4px 0 rgba(107,74,86,.25);z-index:50;letter-spacing:.1em;
+}
+.add-btn:active{transform:translateX(-50%) translateY(3px);box-shadow:0 1px 0 rgba(107,74,86,.25)}
+
+/* ---------- 底部 Tab ---------- */
+nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;
+  background:var(--card);border-top:2.5px solid var(--ink);
+  display:flex;padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.68rem;color:var(--ink-soft);padding:4px}
+nav button .ico{font-size:1.35rem;filter:grayscale(.6);opacity:.7}
+nav button.on{color:var(--pink-deep);font-weight:800}
+nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
+
+/* ---------- 面板通用 ---------- */
+.page{padding:0 20px}
+.card{
+  background:var(--card);border:2.5px solid var(--ink);border-radius:var(--hand);
+  padding:18px;margin:14px 0;box-shadow:3px 4px 0 rgba(107,74,86,.10);
+}
+.card h3{font-size:.95rem;margin-bottom:12px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.8rem;color:var(--ink-soft);margin-bottom:6px}
+.field input,.field textarea,.field select{
+  width:100%;padding:11px 14px;border:2px solid var(--ink);border-radius:var(--hand2);
+  background:var(--pink-faint);outline:none;
+}
+.field input:focus,.field textarea:focus{background:#fff}
+.btn{
+  display:inline-block;padding:11px 22px;border:2px solid var(--ink);border-radius:var(--hand);
+  font-weight:700;font-size:.9rem;box-shadow:2px 3px 0 rgba(107,74,86,.15);background:var(--pink-pale);
+}
+.btn:active{transform:translateY(2px);box-shadow:none}
+.btn-primary{background:var(--pink-deep);color:#fff}
+.btn-block{display:block;width:100%;text-align:center}
+.btn-ghost{background:#fff;color:var(--ink-soft)}
+
+/* ---------- 猫粮库 ---------- */
+.search-row{padding:14px 20px 4px;display:flex;gap:10px}
+.search-row input{
+  flex:1;padding:11px 16px;border:2px solid var(--ink);border-radius:var(--hand);
+  background:#fff;outline:none;
+}
+.food-group-title{margin:16px 20px 6px;font-size:.8rem;font-weight:700;color:var(--ink-soft)}
+.food-item{
+  margin:0 20px 10px;background:var(--card);border:2px solid var(--ink);border-radius:var(--hand2);
+  padding:12px 16px;display:flex;align-items:center;gap:12px;
+}
+.food-item .fi{flex:1;min-width:0}
+.food-item .fn{font-weight:700;font-size:.92rem}
+.food-item .fs{font-size:.74rem;color:var(--ink-soft);margin-top:2px}
+.food-item .fk{font-weight:800;font-size:.9rem;white-space:nowrap}
+.food-item .fa{display:flex;gap:2px}
+.food-item .fa button{font-size:.95rem;padding:5px}
+.type-pill{display:inline-block;font-size:.68rem;padding:2px 8px;border-radius:99px;background:var(--pink-pale);margin-right:5px}
+
+/* ---------- 底部弹出 Sheet ---------- */
+.sheet-mask{
+  position:fixed;inset:0;background:rgba(107,74,86,.35);z-index:90;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.sheet-mask.show{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:95;max-height:86vh;
+  background:var(--bg);border:2.5px solid var(--ink);border-bottom:none;
+  border-radius:26px 26px 0 0;padding:18px 20px calc(20px + env(safe-area-inset-bottom));
+  transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.9,.35,1);
+  overflow-y:auto;
+}
+.sheet.show{transform:translateY(0)}
+.sheet-handle{width:44px;height:5px;border-radius:99px;background:var(--pink);margin:0 auto 14px}
+.sheet h2{font-size:1.05rem;text-align:center;margin-bottom:14px}
+.pct-row{display:flex;gap:8px;margin:12px 0}
+.pct-btn{
+  flex:1;padding:12px 0;border:2px solid var(--ink);border-radius:var(--hand2);
+  background:#fff;font-weight:800;font-size:.95rem;
+}
+.pct-btn.on{background:var(--pink-deep);color:#fff;box-shadow:2px 3px 0 rgba(107,74,86,.2)}
+.slider-row{display:flex;align-items:center;gap:12px;margin:6px 0 4px}
+.slider-row input[type=range]{flex:1;accent-color:var(--pink-deep);height:32px}
+.slider-val{font-weight:800;min-width:52px;text-align:right}
+.kcal-preview{
+  text-align:center;font-size:1.3rem;font-weight:800;margin:14px 0 6px;
+  padding:12px;border:2px dashed var(--pink);border-radius:var(--hand);
+}
+.kcal-preview small{display:block;font-size:.72rem;color:var(--ink-soft);font-weight:400;margin-top:3px}
+.pick-food{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:12px 14px;border:2px solid var(--ink);border-radius:var(--hand2);
+  background:#fff;margin-bottom:8px;
+}
+.pick-food .pf-k{margin-left:auto;font-weight:800;font-size:.85rem;white-space:nowrap}
+.pick-food.hot{background:var(--pink-faint);border-color:var(--pink-deep)}
+.sheet-search{width:100%;padding:11px 16px;border:2px solid var(--ink);border-radius:var(--hand);background:#fff;outline:none;margin-bottom:12px}
+.back-link{display:inline-block;margin-bottom:10px;color:var(--ink-soft);font-size:.85rem}
+
+/* ---------- Toast & 撒花 ---------- */
+.toast{
+  position:fixed;top:calc(20px + env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-80px);
+  background:var(--ink);color:#fff;padding:10px 22px;border-radius:99px;font-size:.85rem;font-weight:700;
+  z-index:200;transition:transform .3s;white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.paw-fly{position:fixed;font-size:1.2rem;z-index:150;pointer-events:none;animation:fly 1s ease-out forwards}
+@keyframes fly{0%{opacity:1;transform:translateY(0) scale(.6)}100%{opacity:0;transform:translateY(-120px) scale(1.3) rotate(30deg)}}
+
+/* ---------- 其他 ---------- */
+.doodle{display:block;margin:6px auto;opacity:.8}
+.row2{display:flex;gap:10px}
+.row2 .field{flex:1}
+.danger-text{color:var(--danger);font-weight:700}
+.avatar-pick{display:flex;gap:10px;font-size:1.6rem;flex-wrap:wrap}
+.avatar-pick button{padding:6px;border:2px solid transparent;border-radius:14px}
+.avatar-pick button.on{border-color:var(--pink-deep);background:var(--pink-faint)}
+.batch-err{font-size:.75rem;color:var(--danger);margin-top:6px}
+.batch-preview{margin-top:12px}
+.settings-link{color:var(--ink-soft);font-size:.8rem;text-decoration:underline}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ 首页 ═══════════ -->
+<div id="page-home">
+  <header>
+    <div class="date" id="today-date"></div>
+    <div class="cat-name"><span id="cat-avatar">😺</span> <span id="cat-name">小猫咪</span></div>
+  </header>
+
+  <div class="hero">
+    <svg class="doodle" width="120" height="14" viewBox="0 0 120 14"><path d="M2 8 Q 12 2, 22 8 T 42 8 T 62 8 T 82 8 T 102 8 T 122 8" fill="none" stroke="#F4A7BE" stroke-width="2.5" stroke-linecap="round"/></svg>
+    <div class="mood" id="mood">😸</div>
+    <div class="remain-num" id="remain-num">--</div>
+    <div class="remain-label" id="remain-label">今天还能吃 (kcal)</div>
+    <div class="bar-wrap">
+      <div class="bar" id="bar">
+        <div class="bar-fill" id="bar-fill"></div>
+        <div class="bar-paws"><span>🐾</span><span>🐾</span><span>🐾</span></div>
+      </div>
+      <div class="bar-meta"><span id="eaten-label">已吃 0 kcal</span><span id="target-label">目标 0 kcal</span></div>
+    </div>
+  </div>
+
+  <div class="section-title">今日进食 🐟</div>
+  <div class="timeline" id="timeline"></div>
+  <div class="empty-tip hidden" id="empty-tip">今天还没有记录哦<br>点下面的小按钮记一餐吧 🐾</div>
+
+  <button class="add-btn" id="btn-add">记一餐 🐾</button>
+</div>
+
+<!-- ═══════════ 猫粮库 ═══════════ -->
+<div id="page-foods" class="hidden">
+  <header><div class="cat-name">🍖 猫粮库</div><div class="date" id="food-count"></div></header>
+  <div class="search-row">
+    <input id="food-search" placeholder="🔍 搜一搜…">
+  </div>
+  <div class="row2" style="padding:10px 20px 0">
+    <button class="btn btn-primary" style="flex:1" id="btn-food-add">＋ 新增</button>
+    <button class="btn" style="flex:1" id="btn-food-batch">📋 批量录入</button>
+  </div>
+  <div id="food-list"></div>
+</div>
+
+<!-- ═══════════ 我的 ═══════════ -->
+<div id="page-me" class="hidden">
+  <header><div class="cat-name">🎀 我的</div></header>
+  <div class="page">
+    <div class="card">
+      <h3>猫咪资料</h3>
+      <div class="field"><label>名字</label><input id="set-name" placeholder="猫咪名字"></div>
+      <div class="field"><label>头像</label>
+        <div class="avatar-pick" id="avatar-pick"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>每日目标 (kcal)</label><input id="set-target" type="number" inputmode="numeric" placeholder="如 250"></div>
+        <div class="field"><label>当前体重 (kg)</label><input id="set-weight" type="number" inputmode="decimal" step="0.1" placeholder="如 4.2"></div>
+      </div>
+      <div id="rer-box" class="hidden" style="font-size:.82rem;color:var(--ink-soft);margin-bottom:10px"></div>
+      <button class="btn btn-primary btn-block" id="btn-save-profile">保存 💾</button>
+    </div>
+
+    <div class="card">
+      <h3>数据备份</h3>
+      <p style="font-size:.78rem;color:var(--ink-soft);margin-bottom:12px;line-height:1.7">数据只存在这台手机上。建议定期导出备份到 iCloud 文件或微信收藏。</p>
+      <div class="row2">
+        <button class="btn" style="flex:1" id="btn-export">📤 导出 JSON</button>
+        <button class="btn" style="flex:1" id="btn-import">📥 导入</button>
+      </div>
+      <input type="file" id="import-file" accept=".json,application/json" class="hidden">
+    </div>
+
+    <div class="card">
+      <h3>关于</h3>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 v1.0 · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 底部 Tab ═══════════ -->
+<nav>
+  <button data-tab="home" class="on"><span class="ico">🏠</span>今日</button>
+  <button data-tab="foods"><span class="ico">🍖</span>猫粮库</button>
+  <button data-tab="me"><span class="ico">🎀</span>我的</button>
+</nav>
+
+<!-- ═══════════ 记一餐 Sheet ═══════════ -->
+<div class="sheet-mask" id="mask"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <!-- 步骤1：选食物 -->
+  <div id="step-pick">
+    <h2>吃了什么呀？🐟</h2>
+    <input class="sheet-search" id="pick-search" placeholder="🔍 搜索猫粮库…">
+    <div id="pick-list" style="max-height:44vh;overflow-y:auto"></div>
+    <button class="btn btn-ghost btn-block" id="btn-custom" style="margin-top:6px">✏️ 不在库里？手动记一笔</button>
+  </div>
+  <!-- 步骤2：比例/克数 -->
+  <div id="step-amount" class="hidden">
+    <a class="back-link" id="back-pick">‹ 重选食物</a>
+    <h2 id="amount-title">吃了多少？</h2>
+    <div id="pct-zone">
+      <div class="pct-row">
+        <button class="pct-btn" data-pct="25">25%</button>
+        <button class="pct-btn" data-pct="50">50%</button>
+        <button class="pct-btn" data-pct="75">75%</button>
+        <button class="pct-btn on" data-pct="100">100%</button>
+      </div>
+      <div class="slider-row">
+        <input type="range" id="pct-slider" min="5" max="100" step="5" value="100">
+        <span class="slider-val" id="pct-val">100%</span>
+      </div>
+    </div>
+    <div id="grams-zone" class="hidden">
+      <div class="field"><label>吃了多少克 (g)</label><input id="grams-input" type="number" inputmode="decimal" placeholder="如 40"></div>
+    </div>
+    <div class="kcal-preview"><span id="preview-kcal">0</span> kcal<small id="preview-formula"></small></div>
+    <div class="field"><label>时间（可补录）</label><input id="meal-time" type="datetime-local"></div>
+    <button class="btn btn-primary btn-block" id="btn-save-meal">记下啦 ✅</button>
+  </div>
+  <!-- 步骤2b：手动记一笔 -->
+  <div id="step-custom" class="hidden">
+    <a class="back-link" id="back-pick2">‹ 返回选食物</a>
+    <h2>手动记一笔 ✏️</h2>
+    <div class="field"><label>吃了什么</label><input id="custom-name" placeholder="如：冻干零食几颗"></div>
+    <div class="field"><label>估算热量 (kcal)</label><input id="custom-kcal" type="number" inputmode="decimal" placeholder="如 30"></div>
+    <div class="field"><label>时间</label><input id="custom-time" type="datetime-local"></div>
+    <button class="btn btn-primary btn-block" id="btn-save-custom">记下啦 ✅</button>
+  </div>
+</div>
+
+<!-- ═══════════ 猫粮编辑 Sheet ═══════════ -->
+<div class="sheet" id="sheet-food">
+  <div class="sheet-handle"></div>
+  <h2 id="food-form-title">新增猫粮 🍖</h2>
+  <div class="field"><label>名称</label><input id="ff-name" placeholder="如：顽皮鲜封包鸡肉味"></div>
+  <div class="field"><label>类型</label>
+    <select id="ff-type">
+      <option>酱包</option><option>罐头</option><option>干粮</option><option>零食</option><option>其他</option>
+    </select>
+  </div>
+  <div class="row2">
+    <div class="field" id="ff-pack-field"><label>每包/每罐热量 (kcal)</label><input id="ff-pack" type="number" inputmode="decimal" placeholder="如 85"></div>
+    <div class="field hidden" id="ff-100g-field"><label>每 100g 热量 (kcal)</label><input id="ff-100g" type="number" inputmode="decimal" placeholder="如 380"></div>
+  </div>
+  <div class="field"><label>规格备注（选填）</label><input id="ff-spec" placeholder="如 85g/包"></div>
+  <button class="btn btn-primary btn-block" id="btn-save-food">保存 💾</button>
+</div>
+
+<!-- ═══════════ 批量录入 Sheet ═══════════ -->
+<div class="sheet" id="sheet-batch">
+  <div class="sheet-handle"></div>
+  <h2>批量录入 📋</h2>
+  <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8;margin-bottom:10px">
+    每行一条，格式：<b>名称, 类型, 热量</b><br>
+    餐包/罐头/零食 → 填<b>每包 kcal</b>；干粮填<b>每100g kcal</b>（类型写 干粮 或 干粮100g）
+  </p>
+  <div class="field"><textarea id="batch-text" rows="7" placeholder="顽皮鲜封包鸡肉味, 酱包, 85&#10;皇家室内成猫粮, 干粮, 380&#10;小李子罐头牛肉, 罐头, 120"></textarea></div>
+  <div class="batch-err" id="batch-err"></div>
+  <div class="batch-preview" id="batch-preview"></div>
+  <button class="btn btn-primary btn-block" id="btn-do-batch" style="margin-top:12px">解析并入库 🚀</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ═══════════════ 数据层 ═══════════════ */
+const LS_KEY = 'nekoKcal.v1';
+const AVATARS = ['😺','😸','😻','😼','😽','🐱','🐈','🐈‍⬛'];
+const TYPE_EMOJI = {'酱包':'🥫','罐头':'🥫','干粮':'🍘','零食':'🍬','其他':'🍽️'};
+
+function defaultState(){
+  return {
+    profile:{name:'小猫咪', avatar:'😺', targetKcal:250, weightKg:0},
+    foods:[
+      {id:uid(), name:'示例·鸡肉酱包', type:'酱包', kcalPerPack:85, kcalPer100g:null, spec:'85g/包', useCount:0},
+      {id:uid(), name:'示例·牛肉罐头', type:'罐头', kcalPerPack:120, kcalPer100g:null, spec:'170g/罐', useCount:0},
+      {id:uid(), name:'示例·成猫干粮', type:'干粮', kcalPerPack:null, kcalPer100g:380, spec:'', useCount:0},
+    ],
+    meals:[], weights:[]
+  };
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function load(){
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return defaultState();
+}
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(S)); }
+let S = load();
+
+/* ═══════════════ 工具 ═══════════════ */
+const $ = id => document.getElementById(id);
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+function todayKey(ts){
+  const d = ts ? new Date(ts) : new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtTime(ts){ const d=new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function toLocalInput(ts){
+  const d = ts?new Date(ts):new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')
+    +'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function pawRain(){
+  for(let i=0;i<6;i++){
+    const p = document.createElement('div');
+    p.className='paw-fly'; p.textContent=['🐾','💕','⭐'][i%3];
+    p.style.left = (30+Math.random()*40)+'%';
+    p.style.bottom = (120+Math.random()*60)+'px';
+    p.style.animationDelay = (Math.random()*.25)+'s';
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(), 1400);
+  }
+}
+
+/* ═══════════════ Tab 切换 ═══════════════ */
+const PAGES = {home:'page-home', foods:'page-foods', me:'page-me'};
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
+    Object.values(PAGES).forEach(p=>$(p).classList.add('hidden'));
+    $(PAGES[b.dataset.tab]).classList.remove('hidden');
+    if(b.dataset.tab==='foods') renderFoods();
+    if(b.dataset.tab==='me') renderMe();
+    if(b.dataset.tab==='home') renderHome();
+  };
+});
+
+/* ═══════════════ 首页 ═══════════════ */
+function todayMeals(){
+  const k = todayKey();
+  return S.meals.filter(m=>todayKey(m.timestamp)===k).sort((a,b)=>b.timestamp-a.timestamp);
+}
+function todayKcal(){ return todayMeals().reduce((s,m)=>s+m.kcal,0); }
+
+function moodFor(ratio){
+  if(ratio>1) return '🙀';
+  if(ratio>=0.9) return '😻';
+  if(ratio>=0.5) return '😺';
+  return '😸';
+}
+function renderHome(){
+  const target = S.profile.targetKcal || 0;
+  const eaten = Math.round(todayKcal()*10)/10;
+  const remain = Math.round((target-eaten)*10)/10;
+  const ratio = target>0 ? eaten/target : 0;
+
+  $('today-date').textContent = new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});
+  $('cat-name').textContent = S.profile.name || '小猫咪';
+  $('cat-avatar').textContent = S.profile.avatar || '😺';
+
+  const mood = $('mood');
+  const newMood = moodFor(ratio);
+  if(mood.textContent!==newMood){ mood.textContent=newMood; mood.classList.remove('pop'); void mood.offsetWidth; mood.classList.add('pop'); }
+
+  if(remain>=0){
+    $('remain-num').textContent = remain;
+    $('remain-num').classList.remove('over');
+    $('remain-label').textContent = ratio>=0.9 ? '快吃满啦，还能吃 (kcal)' : '今天还能吃 (kcal)';
+  }else{
+    $('remain-num').textContent = '+'+Math.abs(remain);
+    $('remain-num').classList.add('over');
+    $('remain-label').textContent = '超量啦 🙀 (kcal)';
+  }
+  $('bar').classList.toggle('over', ratio>1);
+  $('bar-fill').style.width = Math.min(ratio*100,100)+'%';
+  $('eaten-label').textContent = '已吃 '+eaten+' kcal';
+  $('target-label').textContent = '目标 '+target+' kcal';
+
+  const list = $('timeline'); list.innerHTML='';
+  const meals = todayMeals();
+  $('empty-tip').classList.toggle('hidden', meals.length>0);
+  meals.forEach(m=>{
+    const card = document.createElement('div'); card.className='meal-card';
+    const food = m.foodId ? S.foods.find(f=>f.id===m.foodId) : null;
+    const emoji = food ? (TYPE_EMOJI[food.type]||'🍽️') : '✏️';
+    const name = food ? food.name : (m.customName||'手动记录');
+    const sub = fmtTime(m.timestamp) + (m.percent? ' · 吃了'+m.percent+'%' : (m.grams? ' · '+m.grams+'g' : ''));
+    card.innerHTML = '<span class="meal-emoji">'+emoji+'</span>'
+      +'<div class="meal-info"><div class="meal-name"></div><div class="meal-sub">'+sub+'</div></div>'
+      +'<span class="meal-kcal">'+Math.round(m.kcal)+' kcal</span>'
+      +'<button class="meal-del">✕</button>';
+    card.querySelector('.meal-name').textContent = name;
+    card.querySelector('.meal-del').onclick = ()=>{
+      if(confirm('删掉这条记录？')){
+        S.meals = S.meals.filter(x=>x.id!==m.id); save(); renderHome(); toast('已删除');
+      }
+    };
+    list.appendChild(card);
+  });
+}
+
+/* ═══════════════ 记一餐 ═══════════════ */
+let pickedFood = null, curPct = 100;
+
+function openSheet(id){
+  $('mask').classList.add('show');
+  $(id).classList.add('show');
+}
+function closeSheets(){
+  $('mask').classList.remove('show');
+  document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('show'));
+}
+$('mask').onclick = closeSheets;
+
+function showStep(step){
+  ['step-pick','step-amount','step-custom'].forEach(s=>$(s).classList.add('hidden'));
+  $(step).classList.remove('hidden');
+}
+
+function renderPickList(q){
+  const box = $('pick-list'); box.innerHTML='';
+  let foods = S.foods.slice();
+  if(q) foods = foods.filter(f=>f.name.toLowerCase().includes(q.toLowerCase()));
+  foods.sort((a,b)=>b.useCount-a.useCount);
+  if(!foods.length){
+    box.innerHTML = '<div class="empty-tip" style="margin:0">库里还没有这种食物<br>去「猫粮库」录一个吧 🍖</div>';
+    return;
+  }
+  foods.forEach((f,i)=>{
+    const b = document.createElement('button');
+    b.className = 'pick-food' + (i<3 && !q ? ' hot':'');
+    const kcalTxt = f.kcalPerPack!=null ? f.kcalPerPack+' kcal/包' : f.kcalPer100g+' kcal/100g';
+    b.innerHTML = '<span>'+(TYPE_EMOJI[f.type]||'🍽️')+'</span><span class="fn"></span><span class="pf-k">'+kcalTxt+'</span>';
+    b.querySelector('.fn').textContent = f.name;
+    b.onclick = ()=>{ pickedFood = f; openAmount(); };
+    box.appendChild(b);
+  });
+}
+
+function openAmount(){
+  showStep('step-amount');
+  $('amount-title').textContent = pickedFood.name + ' 吃了多少？';
+  const isPack = pickedFood.kcalPerPack != null;
+  $('pct-zone').classList.toggle('hidden', !isPack);
+  $('grams-zone').classList.toggle('hidden', isPack);
+  $('meal-time').value = toLocalInput();
+  if(isPack){ setPct(100); $('pct-slider').value=100; }
+  else { $('grams-input').value=''; updatePreview(); }
+}
+
+function setPct(p){
+  curPct = p;
+  $('pct-val').textContent = p+'%';
+  document.querySelectorAll('.pct-btn').forEach(b=>b.classList.toggle('on', +b.dataset.pct===p));
+  updatePreview();
+}
+function updatePreview(){
+  let kcal = 0, formula = '';
+  if(pickedFood.kcalPerPack != null){
+    kcal = pickedFood.kcalPerPack * curPct/100;
+    formula = pickedFood.kcalPerPack+' kcal × '+curPct+'%';
+  }else{
+    const g = parseFloat($('grams-input').value)||0;
+    kcal = pickedFood.kcalPer100g * g/100;
+    formula = pickedFood.kcalPer100g+' kcal/100g × '+g+'g';
+  }
+  $('preview-kcal').textContent = Math.round(kcal*10)/10;
+  $('preview-formula').textContent = formula;
+}
+
+document.querySelectorAll('.pct-btn').forEach(b=>{ b.onclick = ()=>{ $('pct-slider').value=b.dataset.pct; setPct(+b.dataset.pct); }; });
+$('pct-slider').oninput = e=>setPct(+e.target.value);
+$('grams-input').oninput = updatePreview;
+
+$('btn-add').onclick = ()=>{
+  pickedFood=null; showStep('step-pick');
+  $('pick-search').value=''; renderPickList('');
+  openSheet('sheet');
+};
+$('pick-search').oninput = e=>renderPickList(e.target.value.trim());
+$('back-pick').onclick = ()=>showStep('step-pick');
+$('back-pick2').onclick = ()=>showStep('step-pick');
+$('btn-custom').onclick = ()=>{ showStep('step-custom'); $('custom-time').value=toLocalInput(); };
+
+$('btn-save-meal').onclick = ()=>{
+  if(!pickedFood) return;
+  let kcal;
+  const meal = {id:uid(), foodId:pickedFood.id, customName:null, percent:null, grams:null, kcal:0,
+    timestamp: $('meal-time').value ? new Date($('meal-time').value).getTime() : Date.now()};
+  if(pickedFood.kcalPerPack != null){
+    meal.percent = curPct;
+    kcal = pickedFood.kcalPerPack * curPct/100;
+  }else{
+    const g = parseFloat($('grams-input').value)||0;
+    if(g<=0){ toast('填一下克数哦'); return; }
+    meal.grams = g;
+    kcal = pickedFood.kcalPer100g * g/100;
+  }
+  meal.kcal = Math.round(kcal*10)/10;
+  S.meals.push(meal);
+  pickedFood.useCount = (pickedFood.useCount||0)+1;
+  save(); closeSheets(); renderHome(); pawRain(); toast('记下啦 +'+meal.kcal+' kcal 🐾');
+};
+
+$('btn-save-custom').onclick = ()=>{
+  const kcal = parseFloat($('custom-kcal').value);
+  if(!kcal || kcal<=0){ toast('填一下热量哦'); return; }
+  S.meals.push({id:uid(), foodId:null, customName:$('custom-name').value.trim()||'手动记录',
+    percent:null, grams:null, kcal:Math.round(kcal*10)/10,
+    timestamp: $('custom-time').value ? new Date($('custom-time').value).getTime() : Date.now()});
+  $('custom-name').value=''; $('custom-kcal').value='';
+  save(); closeSheets(); renderHome(); pawRain(); toast('记下啦 +'+kcal+' kcal 🐾');
+};
+
+/* ═══════════════ 猫粮库 ═══════════════ */
+let editingFoodId = null;
+
+function renderFoods(){
+  const q = $('food-search').value.trim().toLowerCase();
+  $('food-count').textContent = S.foods.length+' 种';
+  const box = $('food-list'); box.innerHTML='';
+  const groups = {};
+  S.foods.forEach(f=>{ (groups[f.type]=groups[f.type]||[]).push(f); });
+  const order = ['酱包','罐头','干粮','零食','其他'];
+  let any = false;
+  order.concat(Object.keys(groups).filter(t=>!order.includes(t))).forEach(t=>{
+    let list = groups[t]; if(!list) return;
+    if(q) list = list.filter(f=>f.name.toLowerCase().includes(q));
+    if(!list.length) return;
+    any = true;
+    list.sort((a,b)=>b.useCount-a.useCount);
+    const h = document.createElement('div'); h.className='food-group-title';
+    h.textContent = (TYPE_EMOJI[t]||'🍽️')+' '+t; box.appendChild(h);
+    list.forEach(f=>{
+      const it = document.createElement('div'); it.className='food-item';
+      const kcalTxt = f.kcalPerPack!=null ? f.kcalPerPack+' kcal/包' : f.kcalPer100g+' kcal/100g';
+      it.innerHTML = '<div class="fi"><div class="fn"></div><div class="fs">'
+        +'<span class="type-pill"></span>'+(f.spec||'')+'</div></div>'
+        +'<span class="fk">'+kcalTxt+'</span>'
+        +'<div class="fa"><button class="fe">✏️</button><button class="fd">🗑</button></div>';
+      it.querySelector('.fn').textContent = f.name;
+      it.querySelector('.type-pill').textContent = f.type;
+      it.querySelector('.fe').onclick = ()=>openFoodForm(f);
+      it.querySelector('.fd').onclick = ()=>{
+        if(confirm('从猫粮库删除「'+f.name+'」？历史记录会保留。')){
+          S.foods = S.foods.filter(x=>x.id!==f.id); save(); renderFoods(); toast('已删除');
+        }
+      };
+      box.appendChild(it);
+    });
+  });
+  if(!any){
+    box.innerHTML = '<div class="empty-tip">'+(q?'没找到相关猫粮':'猫粮库空空的<br>点上面「新增」或「批量录入」吧 🍖')+'</div>';
+  }
+}
+$('food-search').oninput = renderFoods;
+
+function openFoodForm(f){
+  editingFoodId = f ? f.id : null;
+  $('food-form-title').textContent = f ? '编辑猫粮 ✏️' : '新增猫粮 🍖';
+  $('ff-name').value = f?f.name:'';
+  $('ff-type').value = f?f.type:'酱包';
+  $('ff-pack').value = f&&f.kcalPerPack!=null?f.kcalPerPack:'';
+  $('ff-100g').value = f&&f.kcalPer100g!=null?f.kcalPer100g:'';
+  $('ff-spec').value = f?(f.spec||''):'';
+  toggleKcalField();
+  openSheet('sheet-food');
+}
+function toggleKcalField(){
+  const isDry = $('ff-type').value==='干粮';
+  $('ff-pack-field').classList.toggle('hidden', isDry);
+  $('ff-100g-field').classList.toggle('hidden', !isDry);
+}
+$('ff-type').onchange = toggleKcalField;
+$('btn-food-add').onclick = ()=>openFoodForm(null);
+$('btn-food-batch').onclick = ()=>{ $('batch-err').textContent=''; $('batch-preview').innerHTML=''; openSheet('sheet-batch'); };
+
+$('btn-save-food').onclick = ()=>{
+  const name = $('ff-name').value.trim();
+  if(!name){ toast('填一下名称哦'); return; }
+  const type = $('ff-type').value;
+  const pack = parseFloat($('ff-pack').value);
+  const per100 = parseFloat($('ff-100g').value);
+  const data = {name, type, spec:$('ff-spec').value.trim(),
+    kcalPerPack: type==='干粮' ? null : (pack||null),
+    kcalPer100g: type==='干粮' ? (per100||null) : null};
+  if(data.kcalPerPack==null && data.kcalPer100g==null){ toast('填一下热量哦'); return; }
+  if(editingFoodId){
+    const f = S.foods.find(x=>x.id===editingFoodId);
+    Object.assign(f, data);
+  }else{
+    S.foods.push(Object.assign({id:uid(), useCount:0}, data));
+  }
+  save(); closeSheets(); renderFoods(); toast('保存成功 🍖');
+};
+
+/* 批量录入 */
+function parseBatch(text){
+  const ok=[], bad=[];
+  text.split('\n').map(l=>l.trim()).filter(Boolean).forEach((l,i)=>{
+    const parts = l.split(/[,，]/).map(s=>s.trim());
+    if(parts.length<3){ bad.push((i+1)+' 行：'+l+'（要 3 段）'); return; }
+    const [name, typeRaw, kcalRaw] = parts;
+    const kcal = parseFloat(kcalRaw);
+    if(!name || !isFinite(kcal) || kcal<=0){ bad.push((i+1)+' 行：'+l+'（热量不对）'); return; }
+    const isDry = typeRaw.includes('干粮');
+    const type = isDry ? '干粮' : (['酱包','罐头','零食','其他'].find(t=>typeRaw.includes(t)) || '其他');
+    ok.push({id:uid(), name, type, kcalPerPack:isDry?null:kcal, kcalPer100g:isDry?kcal:null, spec:'', useCount:0});
+  });
+  return {ok, bad};
+}
+$('btn-do-batch').onclick = ()=>{
+  const {ok, bad} = parseBatch($('batch-text').value);
+  const errBox = $('batch-err'), pv = $('batch-preview');
+  pv.innerHTML='';
+  if(!ok.length && !bad.length){ errBox.textContent='先粘贴内容哦'; return; }
+  errBox.innerHTML = bad.map(escapeHtml).join('<br>');
+  if(ok.length){
+    S.foods.push(...ok); save();
+    pv.innerHTML = '<div class="card" style="margin:0;padding:12px;font-size:.82rem">✅ 成功入库 <b>'+ok.length+'</b> 条：'
+      + ok.map(f=>escapeHtml(f.name)).join('、') + '</div>';
+    renderFoods(); pawRain();
+    if(!bad.length){ $('batch-text').value=''; setTimeout(closeSheets, 900); }
+    toast('入库 '+ok.length+' 条 🎉');
+  }
+};
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ═══════════════ 我的 ═══════════════ */
+function renderMe(){
+  $('set-name').value = S.profile.name||'';
+  $('set-target').value = S.profile.targetKcal||'';
+  $('set-weight').value = S.profile.weightKg||'';
+  const ap = $('avatar-pick'); ap.innerHTML='';
+  AVATARS.forEach(a=>{
+    const b = document.createElement('button');
+    b.textContent = a; b.className = a===S.profile.avatar?'on':'';
+    b.onclick = ()=>{ S.profile.avatar=a; save(); ap.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); };
+    ap.appendChild(b);
+  });
+  updateRer();
+}
+function updateRer(){
+  const kg = parseFloat($('set-weight').value);
+  const box = $('rer-box');
+  if(kg>0){
+    const rer = Math.round(70*Math.pow(kg,0.75));
+    box.classList.remove('hidden');
+    box.innerHTML = '💡 按 '+kg+'kg 估算：静息需求 RER ≈ <b>'+rer+'</b> kcal，'
+      +'绝育成猫建议 ≈ <b>'+Math.round(rer*1.2)+'</b> kcal '
+      +'<a href="#" class="settings-link" id="use-rer">采用</a>';
+    $('use-rer').onclick = e=>{ e.preventDefault(); $('set-target').value = Math.round(rer*1.2); };
+  }else box.classList.add('hidden');
+}
+$('set-weight').oninput = updateRer;
+$('btn-save-profile').onclick = ()=>{
+  S.profile.name = $('set-name').value.trim()||'小猫咪';
+  S.profile.targetKcal = parseFloat($('set-target').value)||0;
+  S.profile.weightKg = parseFloat($('set-weight').value)||0;
+  save(); renderHome(); toast('保存好啦 💾');
+};
+
+/* 导入导出 */
+$('btn-export').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '喵热量备份-'+todayKey()+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('已导出 📤');
+};
+$('btn-import').onclick = ()=>$('import-file').click();
+$('import-file').onchange = e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      const data = JSON.parse(r.result);
+      if(!data.profile || !Array.isArray(data.foods)) throw 0;
+      S = data; save(); renderHome(); renderMe(); toast('导入成功 🎉');
+    }catch(err){ toast('文件不对哦 😿'); }
+  };
+  r.readAsText(f); e.target.value='';
+};
+
+/* ═══════════════ 启动 ═══════════════ */
+if('serviceWorker' in navigator && location.protocol!=='file:'){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+renderHome();
+</script>
+</body>
+</html>

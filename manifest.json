@@ -1,0 +1,13 @@
+{
+  "name": "喵热量",
+  "short_name": "喵热量",
+  "description": "猫咪每日热量记录",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FFF5F7",
+  "theme_color": "#FFF5F7",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
