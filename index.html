@@ -103,6 +103,8 @@ nav{
 }
 nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.68rem;color:var(--ink-soft);padding:4px}
 nav button .ico{font-size:1.35rem;filter:grayscale(.6);opacity:.7}
+nav button .tico{width:26px;height:26px;filter:grayscale(.6);opacity:.7;transition:transform .2s}
+nav button.on .tico{filter:none;opacity:1;transform:scale(1.12)}
 nav button.on{color:var(--pink-deep);font-weight:800}
 nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
@@ -291,8 +293,8 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
 <!-- ═══════════ 底部 Tab ═══════════ -->
 <nav>
-  <button data-tab="home" class="on"><span class="ico">🏠</span>今日</button>
-  <button data-tab="foods"><span class="ico">🍖</span>猫粮库</button>
+  <button data-tab="home" class="on"><img class="tico" src="tab-home.png" alt="">今日</button>
+  <button data-tab="foods"><img class="tico" src="tab-foods.png" alt="">猫粮库</button>
   <button data-tab="me"><span class="ico">🎀</span>我的</button>
 </nav>
 
