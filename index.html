@@ -39,6 +39,7 @@ header{
 .date-arrow.off{opacity:.2}
 header .date{font-size:.85rem;color:var(--ink-soft);letter-spacing:.05em;border-bottom:2px dashed var(--pink);cursor:pointer}
 header .cat-name{font-size:1.05rem;font-weight:700}
+header .page-ico{width:24px;height:24px;vertical-align:-5px}
 
 /* ---------- 首页进度区 ---------- */
 .hero{padding:14px 20px 4px;text-align:center;position:relative}
@@ -261,7 +262,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
 <!-- ═══════════ 猫粮库 ═══════════ -->
 <div id="page-foods" class="hidden">
-  <header><div class="cat-name">🍖 猫粮库</div><div class="date" id="food-count"></div></header>
+  <header><div class="cat-name"><img class="page-ico" src="tab-foods.png" alt=""> 猫粮库</div><div class="date" id="food-count"></div></header>
   <div class="search-row">
     <input id="food-search" placeholder="🔍 搜一搜…">
   </div>
