@@ -345,7 +345,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   <div class="field"><label>名称</label><input id="ff-name" placeholder="如：顽皮鲜封包鸡肉味"></div>
   <div class="field"><label>类型</label>
     <select id="ff-type">
-      <option>酱包</option><option>罐头</option><option>干粮</option><option>零食</option><option>其他</option>
+      <option>罐头</option><option>酱包</option><option>冻干</option><option>猫条</option><option>猫粮</option><option>其他</option>
     </select>
   </div>
   <div class="row2">
@@ -362,7 +362,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   <h2>批量录入 📋</h2>
   <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8;margin-bottom:10px">
     每行一条，格式：<b>名称, 类型, 热量</b><br>
-    餐包/罐头/零食 → 填<b>每包 kcal</b>；干粮填<b>每100g kcal</b>（类型写 干粮 或 干粮100g）
+    罐头/酱包/冻干/猫条 → 填<b>每包 kcal</b>；猫粮填<b>每100g kcal</b>（类型写 猫粮）
   </p>
   <div class="field"><textarea id="batch-text" rows="7" placeholder="顽皮鲜封包鸡肉味, 酱包, 85&#10;皇家室内成猫粮, 干粮, 380&#10;小李子罐头牛肉, 罐头, 120"></textarea></div>
   <div class="batch-err" id="batch-err"></div>
@@ -376,24 +376,77 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 'use strict';
 /* ═══════════════ 数据层 ═══════════════ */
 const LS_KEY = 'nekoKcal.v1';
+const SEED_VERSION = 2;   // 内置猫粮库版本，改动此号即触发旧库清空重灌
 const AVATARS = ['😺','😸','😻','😼','😽','🐱','🐈','🐈‍⬛'];
-const TYPE_EMOJI = {'酱包':'🥫','罐头':'🥫','干粮':'🍘','零食':'🍬','其他':'🍽️'};
+const TYPE_EMOJI = {'罐头':'🥫','酱包':'🥣','冻干':'🍗','猫条':'🍡','猫粮':'🍘','干粮':'🍘','零食':'🍬','其他':'🍽️'};
+const TYPE_ORDER = ['罐头','酱包','冻干','猫条','猫粮','其他'];
+const DRY_TYPES = ['猫粮','干粮'];   // 按克计价（每100g kcal）的类型
+
+function defaultFoods(){
+  const F = (name, type, kcal, spec, per100) => ({
+    id: uid(), name, type, spec: spec||'', useCount: 0,
+    kcalPerPack: per100 ? null : kcal,
+    kcalPer100g: per100 ? kcal : null
+  });
+  return [
+    // ── 罐头类 ──
+    F('短脖子乔治乳鸽味','罐头',70.3,'80g/罐'),
+    F('喵招','罐头',88.24,'85g/罐'),
+    F('格吾安四季罐·莓果鸡肉/芦笋鸭肉/山药鸡/冬笋牛约','罐头',94.01,'85g/罐'),
+    F('格吾安四季罐·石榴鸡/秋月梨鸭/芭乐鸭/山竹鸡','罐头',86.7,'85g/罐'),
+    F('二人一物熔岩罐','罐头',19.4,'40g/罐'),
+    F('猫爸爸厨房','罐头',32.54,'80g/罐'),
+    F('尾巴生活彩虹杯','罐头',35,'40g/杯'),
+    F('毛兀罐罐','罐头',45,'50g/罐'),
+    // ── 酱包类 ──
+    F('麻姆mini包','酱包',30,'50g/包'),
+    F('食物链m90','酱包',85,'80g/包'),
+    F('格吾安奶昔','酱包',28.36,'50g/包'),
+    F('布兰德酱包','酱包',99.84,'85g/包'),
+    F('二人一物汤包','酱包',31.68,'60g/包'),
+    F('毛兀果蔬鸡','酱包',87,'80g/包'),
+    F('尾巴生活紫泥','酱包',72,'80g/包'),
+    F('尾巴生活彩虹泥酱包','酱包',67.6,'80g/包'),
+    F('益嘉禾暮','酱包',49.5,'80g/包'),
+    F('喵梵思','酱包',82,'85g/包'),
+    F('虎衍','酱包',74.98,'80g/包'),
+    F('二人一物真果粒','酱包',64.8,'80g/包'),
+    F('二人一物麦卢卡','酱包',63.44,'80g/包'),
+    F('相生之宠绵绵酱','酱包',56.4,'80g/包'),
+    F('麻姆大酱包','酱包',61,'100g/包'),
+    // ── 冻干类 ──
+    F('朗诺棒棒糖','冻干',5,'1.4g/根'),
+    // ── 猫条类 ──
+    F('猫条','猫条',12,'13g/条'),
+    // ── 猫粮类（每100g） ──
+    F('冠能减肥粮','猫粮',361,'',true),
+    F('鲜朗','猫粮',531.7,'',true),
+    // ── 其他类 ──
+    F('虾仁','其他',10,'1只'),
+  ];
+}
 
 function defaultState(){
   return {
     profile:{name:'小猫咪', avatar:'😺', targetKcal:250, weightKg:0},
-    foods:[
-      {id:uid(), name:'示例·鸡肉酱包', type:'酱包', kcalPerPack:85, kcalPer100g:null, spec:'85g/包', useCount:0},
-      {id:uid(), name:'示例·牛肉罐头', type:'罐头', kcalPerPack:120, kcalPer100g:null, spec:'170g/罐', useCount:0},
-      {id:uid(), name:'示例·成猫干粮', type:'干粮', kcalPerPack:null, kcalPer100g:380, spec:'', useCount:0},
-    ],
-    meals:[], weights:[]
+    foods: defaultFoods(),
+    meals:[], weights:[],
+    seedVersion: SEED_VERSION
   };
 }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function load(){
-  try{ const raw = localStorage.getItem(LS_KEY); if(raw) return JSON.parse(raw); }catch(e){}
-  return defaultState();
+  let st = null;
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw) st = JSON.parse(raw); }catch(e){}
+  if(!st) return defaultState();
+  // 内置猫粮库版本升级：清空旧库，灌入新库（喂食记录不受影响）
+  if(st.seedVersion !== SEED_VERSION){
+    st.foods = defaultFoods();
+    st.seedVersion = SEED_VERSION;
+    localStorage.setItem(LS_KEY, JSON.stringify(st));
+    st._justReseeded = true;
+  }
+  return st;
 }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(S)); }
 let S = load();
@@ -625,7 +678,7 @@ function renderFoods(){
   const box = $('food-list'); box.innerHTML='';
   const groups = {};
   S.foods.forEach(f=>{ (groups[f.type]=groups[f.type]||[]).push(f); });
-  const order = ['酱包','罐头','干粮','零食','其他'];
+  const order = TYPE_ORDER;
   let any = false;
   order.concat(Object.keys(groups).filter(t=>!order.includes(t))).forEach(t=>{
     let list = groups[t]; if(!list) return;
@@ -671,7 +724,7 @@ function openFoodForm(f){
   openSheet('sheet-food');
 }
 function toggleKcalField(){
-  const isDry = $('ff-type').value==='干粮';
+  const isDry = DRY_TYPES.includes($('ff-type').value);
   $('ff-pack-field').classList.toggle('hidden', isDry);
   $('ff-100g-field').classList.toggle('hidden', !isDry);
 }
@@ -683,11 +736,12 @@ $('btn-save-food').onclick = ()=>{
   const name = $('ff-name').value.trim();
   if(!name){ toast('填一下名称哦'); return; }
   const type = $('ff-type').value;
+  const isDry = DRY_TYPES.includes(type);
   const pack = parseFloat($('ff-pack').value);
   const per100 = parseFloat($('ff-100g').value);
   const data = {name, type, spec:$('ff-spec').value.trim(),
-    kcalPerPack: type==='干粮' ? null : (pack||null),
-    kcalPer100g: type==='干粮' ? (per100||null) : null};
+    kcalPerPack: isDry ? null : (pack||null),
+    kcalPer100g: isDry ? (per100||null) : null};
   if(data.kcalPerPack==null && data.kcalPer100g==null){ toast('填一下热量哦'); return; }
   if(editingFoodId){
     const f = S.foods.find(x=>x.id===editingFoodId);
@@ -707,8 +761,8 @@ function parseBatch(text){
     const [name, typeRaw, kcalRaw] = parts;
     const kcal = parseFloat(kcalRaw);
     if(!name || !isFinite(kcal) || kcal<=0){ bad.push((i+1)+' 行：'+l+'（热量不对）'); return; }
-    const isDry = typeRaw.includes('干粮');
-    const type = isDry ? '干粮' : (['酱包','罐头','零食','其他'].find(t=>typeRaw.includes(t)) || '其他');
+    const isDry = typeRaw.includes('干粮') || typeRaw.includes('猫粮');
+    const type = isDry ? '猫粮' : (['罐头','酱包','冻干','猫条','零食','其他'].find(t=>typeRaw.includes(t)) || '其他');
     ok.push({id:uid(), name, type, kcalPerPack:isDry?null:kcal, kcalPer100g:isDry?kcal:null, spec:'', useCount:0});
   });
   return {ok, bad};
@@ -792,6 +846,7 @@ if('serviceWorker' in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 renderHome();
+if(S._justReseeded){ delete S._justReseeded; setTimeout(()=>toast('猫粮库已更新为最新录入 🍖'), 600); }
 </script>
 </body>
 </html>
