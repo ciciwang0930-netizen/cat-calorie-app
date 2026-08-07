@@ -34,7 +34,10 @@ header{
   padding:calc(14px + env(safe-area-inset-top)) 20px 6px;
   display:flex;justify-content:space-between;align-items:baseline;
 }
-header .date{font-size:.85rem;color:var(--ink-soft);letter-spacing:.05em}
+.date-nav{display:flex;align-items:center;gap:6px}
+.date-arrow{font-size:1.25rem;color:var(--pink-deep);padding:2px 10px;font-weight:800;line-height:1}
+.date-arrow.off{opacity:.2}
+header .date{font-size:.85rem;color:var(--ink-soft);letter-spacing:.05em;border-bottom:2px dashed var(--pink);cursor:pointer}
 header .cat-name{font-size:1.05rem;font-weight:700}
 
 /* ---------- 首页进度区 ---------- */
@@ -202,6 +205,19 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
 /* ---------- 其他 ---------- */
 .doodle{display:block;margin:6px auto;opacity:.8}
+/* ---------- 日历（手绘风） ---------- */
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.cal-head #cal-title{font-weight:800;font-size:1.05rem}
+.cal-week{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:.72rem;color:var(--ink-soft);margin:10px 0 4px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-cell{position:relative;text-align:center;padding:9px 0 12px;font-size:.9rem;border:2px solid transparent;background:none}
+.cal-cell.today{background:var(--pink-deep);color:#fff;font-weight:800;border-radius:var(--hand2)}
+.cal-cell.sel{border:2px solid var(--ink);border-radius:var(--hand)}
+.cal-cell .dot{position:absolute;left:50%;transform:translateX(-50%);bottom:3px;width:6px;height:6px;border-radius:50%}
+.cal-cell .dot.ok{background:var(--pink)}
+.cal-cell .dot.over{background:var(--danger)}
+.cal-legend{text-align:center;font-size:.72rem;color:var(--ink-soft);margin-top:10px}
+.cal-today-btn{margin-top:10px}
 .row2{display:flex;gap:10px}
 .row2 .field{flex:1}
 .danger-text{color:var(--danger);font-weight:700}
@@ -218,7 +234,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 <!-- ═══════════ 首页 ═══════════ -->
 <div id="page-home">
   <header>
-    <div class="date" id="today-date"></div>
+    <div class="date-nav"><button class="date-arrow" id="date-prev">‹</button><div class="date" id="today-date"></div><button class="date-arrow" id="date-next">›</button></div>
     <div class="cat-name"><img id="cat-avatar-img" src="avatar.png" alt=""> <span id="cat-name">小猫咪</span></div>
   </header>
 
@@ -375,6 +391,20 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   <button class="btn btn-primary btn-block" id="btn-do-batch" style="margin-top:12px">解析并入库 🚀</button>
 </div>
 
+<!-- ═══════════ 日历 Sheet ═══════════ -->
+<div class="sheet" id="sheet-cal">
+  <div class="sheet-handle"></div>
+  <div class="cal-head">
+    <button class="date-arrow" id="cal-prev">‹</button>
+    <div id="cal-title"></div>
+    <button class="date-arrow" id="cal-next">›</button>
+  </div>
+  <div class="cal-week"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+  <div class="cal-grid" id="cal-grid"></div>
+  <div class="cal-legend">粉点=有记录 · 红点=超量 · 粉块=今天</div>
+  <button class="btn btn-block cal-today-btn" id="cal-today">回到今天 🐾</button>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -502,17 +532,27 @@ function todayMeals(){
   return S.meals.filter(m=>todayKey(m.timestamp)===k).sort((a,b)=>b.timestamp-a.timestamp);
 }
 function todayKcal(){ return todayMeals().reduce((s,m)=>s+m.kcal,0); }
+let viewDate = todayKey();
+function viewMeals(){ return S.meals.filter(m=>todayKey(m.timestamp)===viewDate).sort((a,b)=>b.timestamp-a.timestamp); }
 
 function renderHome(){
   const target = S.profile.targetKcal || 0;
-  const eaten = Math.round(todayKcal()*10)/10;
+  const isToday = viewDate===todayKey();
+  const eaten = Math.round(viewMeals().reduce((s,m)=>s+m.kcal,0)*10)/10;
   const remain = Math.round((target-eaten)*10)/10;
   const ratio = target>0 ? eaten/target : 0;
 
-  $('today-date').textContent = new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});
+  const vd = new Date(viewDate+'T12:00:00');
+  $('today-date').textContent = vd.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});
+  $('date-next').classList.toggle('off', isToday);
+  $('btn-add').style.display = isToday ? '' : 'none';
   $('cat-name').textContent = S.profile.name || '小猫咪';
 
-  if(remain>=0){
+  if(!isToday){
+    $('remain-num').textContent = eaten;
+    $('remain-num').classList.remove('over');
+    $('remain-label').textContent = '这一天共吃了 (kcal)';
+  }else if(remain>=0){
     $('remain-num').textContent = remain;
     $('remain-num').classList.remove('over');
     $('remain-label').textContent = ratio>=0.9 ? '快吃满啦，还能吃 (kcal)' : '今天还能吃 (kcal)';
@@ -527,7 +567,7 @@ function renderHome(){
   $('target-label').textContent = '目标 '+target+' kcal';
 
   const list = $('timeline'); list.innerHTML='';
-  const meals = todayMeals();
+  const meals = viewMeals();
   $('empty-tip').classList.toggle('hidden', meals.length>0);
   meals.forEach(m=>{
     const card = document.createElement('div'); card.className='meal-card';
@@ -827,10 +867,48 @@ $('import-file').onchange = e=>{
   r.readAsText(f); e.target.value='';
 };
 
+/* ═══════════════ 日历 ═══════════════ */
+let calCursor = null;
+function openCal(){
+  calCursor = new Date(viewDate+'T12:00:00');
+  renderCal(); openSheet('sheet-cal');
+}
+function renderCal(){
+  const y = calCursor.getFullYear(), m = calCursor.getMonth();
+  $('cal-title').textContent = y+'年'+(m+1)+'月';
+  const sum = {};
+  S.meals.forEach(mm=>{ const k = todayKey(mm.timestamp); sum[k]=(sum[k]||0)+mm.kcal; });
+  const lead = (new Date(y,m,1).getDay()+6)%7;
+  const days = new Date(y,m+1,0).getDate();
+  const grid = $('cal-grid'); grid.innerHTML='';
+  const tk = todayKey(), target = S.profile.targetKcal||0;
+  for(let i=0;i<lead;i++) grid.appendChild(document.createElement('div'));
+  for(let d=1;d<=days;d++){
+    const key = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const c = document.createElement('button');
+    c.className='cal-cell'; c.textContent=d;
+    if(key===tk) c.classList.add('today');
+    if(key===viewDate) c.classList.add('sel');
+    if(sum[key]!=null){
+      const dot = document.createElement('span');
+      dot.className = 'dot '+(target>0 && sum[key]>target ? 'over':'ok');
+      c.appendChild(dot);
+    }
+    c.onclick = ()=>{ viewDate=key; closeSheets(); renderHome(); };
+    grid.appendChild(c);
+  }
+}
+
 /* ═══════════════ 启动 ═══════════════ */
 if('serviceWorker' in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
+$('date-prev').onclick = ()=>{ const d=new Date(viewDate+'T12:00:00'); d.setDate(d.getDate()-1); viewDate=todayKey(d.getTime()); renderHome(); };
+$('date-next').onclick = ()=>{ if(viewDate===todayKey())return; const d=new Date(viewDate+'T12:00:00'); d.setDate(d.getDate()+1); viewDate=todayKey(d.getTime()); renderHome(); };
+$('today-date').onclick = openCal;
+$('cal-prev').onclick = ()=>{ calCursor.setMonth(calCursor.getMonth()-1); renderCal(); };
+$('cal-next').onclick = ()=>{ calCursor.setMonth(calCursor.getMonth()+1); renderCal(); };
+$('cal-today').onclick = ()=>{ viewDate=todayKey(); closeSheets(); renderHome(); };
 renderHome();
 if(S._justReseeded){ delete S._justReseeded; setTimeout(()=>toast('猫粮库已更新为最新录入 🍖'), 600); }
 </script>
