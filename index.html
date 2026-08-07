@@ -52,6 +52,10 @@ header .page-ico{width:24px;height:24px;vertical-align:-5px}
 .remain-num{font-size:2.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
 .remain-num.over{color:var(--danger)}
 .remain-label{font-size:.85rem;color:var(--ink-soft);margin-top:2px}
+.sub-title{font-size:.9rem;color:var(--ink-soft);text-align:center;margin:-6px 0 10px}
+.pct-col{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.big-pct{padding:22px 0;font-size:1.4rem;border:2.5px solid var(--ink);border-radius:var(--hand2);background:#fff;font-weight:800;text-align:center}
+.big-pct.on{background:var(--pink-deep);color:#fff;box-shadow:3px 4px 0 rgba(107,74,86,.2)}
 .bar-wrap{margin:16px 4px 6px;position:relative}
 .bar{
   height:34px;background:var(--pink-pale);border:2.5px solid var(--ink);
@@ -260,6 +264,50 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   <button class="add-btn" id="btn-add">记一餐 🐾</button>
 </div>
 
+<!-- ═══════════ 记一餐（页内流程） ═══════════ -->
+<div id="page-record" class="hidden">
+  <header><div class="cat-name" id="record-title">记一餐 🐾</div></header>
+  <div class="page">
+    <div id="step-pick">
+      <input class="sheet-search" id="pick-search" placeholder="🔍 搜索猫粮库…">
+      <div id="pick-list"></div>
+      <button class="btn btn-ghost btn-block" id="btn-custom" style="margin-top:6px">✏️ 不在库里？手动记一笔</button>
+      <button class="btn btn-ghost btn-block" id="back-home-1" style="margin-top:8px">‹ 返回首页</button>
+    </div>
+    <div id="step-amount" class="hidden">
+      <h2 id="amount-title" style="text-align:center;font-size:1.05rem;margin-bottom:4px"></h2>
+      <div class="sub-title">吃了多少呀？</div>
+      <div id="pct-zone">
+        <div class="pct-col">
+          <button class="big-pct on" data-pct="100">💯 全部吃完</button>
+          <button class="big-pct" data-pct="75">😋 吃了 75%</button>
+          <button class="big-pct" data-pct="50">🙂 吃了一半</button>
+          <button class="big-pct" data-pct="25">🤏 只吃了一点</button>
+        </div>
+        <div class="slider-row">
+          <input type="range" id="pct-slider" min="5" max="100" step="5" value="100">
+          <span class="slider-val" id="pct-val">100%</span>
+        </div>
+      </div>
+      <div id="grams-zone" class="hidden">
+        <div class="field"><label>吃了多少克 (g)</label><input id="grams-input" type="number" inputmode="decimal" placeholder="如 40"></div>
+      </div>
+      <div class="kcal-preview"><span id="preview-kcal">0</span> kcal<small id="preview-formula"></small></div>
+      <div class="field"><label>时间（默认现在，可补录）</label><input id="meal-time" type="datetime-local"></div>
+      <button class="btn btn-primary btn-block" id="btn-save-meal">记下啦 ✅</button>
+      <button class="btn btn-ghost btn-block" id="back-pick" style="margin-top:8px">‹ 重选食物</button>
+    </div>
+    <div id="step-custom" class="hidden">
+      <h2 style="text-align:center;font-size:1.05rem;margin-bottom:12px">手动记一笔 ✏️</h2>
+      <div class="field"><label>吃了什么</label><input id="custom-name" placeholder="如：冻干零食几颗"></div>
+      <div class="field"><label>估算热量 (kcal)</label><input id="custom-kcal" type="number" inputmode="decimal" placeholder="如 30"></div>
+      <div class="field"><label>时间</label><input id="custom-time" type="datetime-local"></div>
+      <button class="btn btn-primary btn-block" id="btn-save-custom">记下啦 ✅</button>
+      <button class="btn btn-ghost btn-block" id="back-pick2" style="margin-top:8px">‹ 返回选食物</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════ 猫粮库 ═══════════ -->
 <div id="page-foods" class="hidden">
   <header><div class="cat-name"><img class="page-ico" src="tab-foods.png" alt=""> 猫粮库</div><div class="date" id="food-count"></div></header>
@@ -319,45 +367,6 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 <div class="sheet-mask" id="mask"></div>
 <div class="sheet" id="sheet">
   <div class="sheet-handle"></div>
-  <!-- 步骤1：选食物 -->
-  <div id="step-pick">
-    <h2>吃了什么呀？🐟</h2>
-    <input class="sheet-search" id="pick-search" placeholder="🔍 搜索猫粮库…">
-    <div id="pick-list" style="max-height:44vh;overflow-y:auto"></div>
-    <button class="btn btn-ghost btn-block" id="btn-custom" style="margin-top:6px">✏️ 不在库里？手动记一笔</button>
-  </div>
-  <!-- 步骤2：比例/克数 -->
-  <div id="step-amount" class="hidden">
-    <a class="back-link" id="back-pick">‹ 重选食物</a>
-    <h2 id="amount-title">吃了多少？</h2>
-    <div id="pct-zone">
-      <div class="pct-row">
-        <button class="pct-btn" data-pct="25">25%</button>
-        <button class="pct-btn" data-pct="50">50%</button>
-        <button class="pct-btn" data-pct="75">75%</button>
-        <button class="pct-btn on" data-pct="100">100%</button>
-      </div>
-      <div class="slider-row">
-        <input type="range" id="pct-slider" min="5" max="100" step="5" value="100">
-        <span class="slider-val" id="pct-val">100%</span>
-      </div>
-    </div>
-    <div id="grams-zone" class="hidden">
-      <div class="field"><label>吃了多少克 (g)</label><input id="grams-input" type="number" inputmode="decimal" placeholder="如 40"></div>
-    </div>
-    <div class="kcal-preview"><span id="preview-kcal">0</span> kcal<small id="preview-formula"></small></div>
-    <div class="field"><label>时间（可补录）</label><input id="meal-time" type="datetime-local"></div>
-    <button class="btn btn-primary btn-block" id="btn-save-meal">记下啦 ✅</button>
-  </div>
-  <!-- 步骤2b：手动记一笔 -->
-  <div id="step-custom" class="hidden">
-    <a class="back-link" id="back-pick2">‹ 返回选食物</a>
-    <h2>手动记一笔 ✏️</h2>
-    <div class="field"><label>吃了什么</label><input id="custom-name" placeholder="如：冻干零食几颗"></div>
-    <div class="field"><label>估算热量 (kcal)</label><input id="custom-kcal" type="number" inputmode="decimal" placeholder="如 30"></div>
-    <div class="field"><label>时间</label><input id="custom-time" type="datetime-local"></div>
-    <button class="btn btn-primary btn-block" id="btn-save-custom">记下啦 ✅</button>
-  </div>
 </div>
 
 <!-- ═══════════ 猫粮编辑 Sheet ═══════════ -->
@@ -515,17 +524,25 @@ function pawRain(){
 }
 
 /* ═══════════════ Tab 切换 ═══════════════ */
-const PAGES = {home:'page-home', foods:'page-foods', me:'page-me'};
-document.querySelectorAll('nav button').forEach(b=>{
-  b.onclick = ()=>{
-    document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
-    Object.values(PAGES).forEach(p=>$(p).classList.add('hidden'));
-    $(PAGES[b.dataset.tab]).classList.remove('hidden');
-    if(b.dataset.tab==='foods') renderFoods();
-    if(b.dataset.tab==='me') renderMe();
-    if(b.dataset.tab==='home') renderHome();
-  };
-});
+const PAGES = {home:'page-home', foods:'page-foods', me:'page-me', record:'page-record'};
+const TAB_ICONS = {home:'tab-home.png', foods:'tab-foods.png'};
+function switchTab(tab){
+  const rec = tab==='record';
+  document.querySelectorAll('nav button').forEach(x=>{
+    const t = x.dataset.tab;
+    x.classList.toggle('on', rec ? t==='home' : t===tab);
+    const img = x.querySelector('img.tico');
+    if(img) img.src = rec && t==='home' ? 'tab-foods.png' : TAB_ICONS[t];
+    if(rec && t==='home') img.style.filter='none', img.style.opacity='1';
+  });
+  $('tab-label-home').textContent = rec ? '记一餐' : '今日';
+  Object.values(PAGES).forEach(p=>$(p).classList.add('hidden'));
+  $(PAGES[tab]).classList.remove('hidden');
+  if(tab==='foods') renderFoods();
+  if(tab==='me') renderMe();
+  if(tab==='home') renderHome();
+}
+document.querySelectorAll('nav button').forEach(b=>{ b.onclick = ()=>switchTab(b.dataset.tab); });
 
 /* ═══════════════ 首页 ═══════════════ */
 function todayMeals(){
@@ -603,10 +620,11 @@ function closeSheets(){
 }
 $('mask').onclick = closeSheets;
 
-function showStep(step){
+function goStep(step){
   ['step-pick','step-amount','step-custom'].forEach(s=>$(s).classList.add('hidden'));
   $(step).classList.remove('hidden');
 }
+let recordReturn = 'home';
 
 function renderPickList(q){
   const box = $('pick-list'); box.innerHTML='';
@@ -629,7 +647,7 @@ function renderPickList(q){
 }
 
 function openAmount(){
-  showStep('step-amount');
+  goStep('step-amount');
   $('amount-title').textContent = pickedFood.name + ' 吃了多少？';
   const isPack = pickedFood.kcalPerPack != null;
   $('pct-zone').classList.toggle('hidden', !isPack);
@@ -642,7 +660,7 @@ function openAmount(){
 function setPct(p){
   curPct = p;
   $('pct-val').textContent = p+'%';
-  document.querySelectorAll('.pct-btn').forEach(b=>b.classList.toggle('on', +b.dataset.pct===p));
+  document.querySelectorAll('.big-pct').forEach(b=>b.classList.toggle('on', +b.dataset.pct===p));
   updatePreview();
 }
 function updatePreview(){
@@ -659,19 +677,20 @@ function updatePreview(){
   $('preview-formula').textContent = formula;
 }
 
-document.querySelectorAll('.pct-btn').forEach(b=>{ b.onclick = ()=>{ $('pct-slider').value=b.dataset.pct; setPct(+b.dataset.pct); }; });
+document.querySelectorAll('.big-pct').forEach(b=>{ b.onclick = ()=>{ $('pct-slider').value=b.dataset.pct; setPct(+b.dataset.pct); }; });
 $('pct-slider').oninput = e=>setPct(+e.target.value);
 $('grams-input').oninput = updatePreview;
 
 $('btn-add').onclick = ()=>{
-  pickedFood=null; showStep('step-pick');
+  pickedFood=null; goStep('step-pick');
   $('pick-search').value=''; renderPickList('');
-  openSheet('sheet');
+  switchTab('record');
 };
 $('pick-search').oninput = e=>renderPickList(e.target.value.trim());
-$('back-pick').onclick = ()=>showStep('step-pick');
-$('back-pick2').onclick = ()=>showStep('step-pick');
-$('btn-custom').onclick = ()=>{ showStep('step-custom'); $('custom-time').value=toLocalInput(); };
+$('back-pick').onclick = ()=>goStep('step-pick');
+$('back-pick2').onclick = ()=>goStep('step-pick');
+$('back-home-1').onclick = ()=>switchTab('home');
+$('btn-custom').onclick = ()=>{ goStep('step-custom'); $('custom-time').value=toLocalInput(); };
 
 $('btn-save-meal').onclick = ()=>{
   if(!pickedFood) return;
@@ -690,7 +709,7 @@ $('btn-save-meal').onclick = ()=>{
   meal.kcal = Math.round(kcal*10)/10;
   S.meals.push(meal);
   pickedFood.useCount = (pickedFood.useCount||0)+1;
-  save(); closeSheets(); renderHome(); pawRain(); toast('记下啦 +'+meal.kcal+' kcal 🐾');
+  save(); switchTab('home'); pawRain(); toast('记下啦 +'+meal.kcal+' kcal 🐾');
 };
 
 $('btn-save-custom').onclick = ()=>{
@@ -700,7 +719,7 @@ $('btn-save-custom').onclick = ()=>{
     percent:null, grams:null, kcal:Math.round(kcal*10)/10,
     timestamp: $('custom-time').value ? new Date($('custom-time').value).getTime() : Date.now()});
   $('custom-name').value=''; $('custom-kcal').value='';
-  save(); closeSheets(); renderHome(); pawRain(); toast('记下啦 +'+kcal+' kcal 🐾');
+  save(); switchTab('home'); pawRain(); toast('记下啦 +'+kcal+' kcal 🐾');
 };
 
 /* ═══════════════ 猫粮库 ═══════════════ */
@@ -763,7 +782,7 @@ function toggleKcalField(){
   $('ff-100g-field').classList.toggle('hidden', !isDry);
 }
 $('ff-type').onchange = toggleKcalField;
-$('btn-food-add').onclick = ()=>openFoodForm(null);
+$('btn-food-add').onclick = ()=>{ recordReturn = $('page-record').classList.contains('hidden') ? 'home' : 'pick'; openFoodForm(null); };
 $('btn-food-batch').onclick = ()=>{ $('batch-err').textContent=''; $('batch-preview').innerHTML=''; openSheet('sheet-batch'); };
 
 $('btn-save-food').onclick = ()=>{
@@ -783,7 +802,16 @@ $('btn-save-food').onclick = ()=>{
   }else{
     S.foods.push(Object.assign({id:uid(), useCount:0}, data));
   }
-  save(); closeSheets(); renderFoods(); toast('保存成功 🍖');
+  save(); closeSheets();
+  if(recordReturn==='amount' && editingFoodId==null){
+    pickedFood = S.foods.find(x=>x.name===data.name) || S.foods[S.foods.length-1];
+    openAmount(); switchTab('record'); toast('已入库，继续记录 👇');
+  }else{
+    renderFoods();
+    if(recordReturn==='pick'){ renderPickList(''); switchTab('record'); }
+    else switchTab('home');
+    toast('保存成功 🍖');
+  }
 };
 
 /* 批量录入 */
