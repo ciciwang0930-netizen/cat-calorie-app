@@ -345,6 +345,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
         <div class="field"><label>每日目标 (kcal)</label><input id="set-target" type="number" inputmode="numeric" placeholder="如 250"></div>
         <div class="field"><label>当前体重 (kg)</label><input id="set-weight" type="number" inputmode="decimal" step="0.1" placeholder="如 4.2"></div>
       </div>
+      <div class="field"><label>摄入比例（%）：减肥 80 / 维持 100 / 增肥 >100，可填任意值</label><input id="set-ratio" type="number" inputmode="decimal" placeholder="100"></div>
       <div id="rer-box" class="hidden" style="font-size:.82rem;color:var(--ink-soft);margin-bottom:10px"></div>
       <button class="btn btn-primary btn-block" id="btn-save-profile">保存 💾</button>
     </div>
@@ -361,7 +362,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v17</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v18</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -907,24 +908,28 @@ function renderMe(){
   $('set-name').value = S.profile.name||'';
   $('set-target').value = S.profile.targetKcal||'';
   $('set-weight').value = S.profile.weightKg||'';
+  $('set-ratio').value = S.profile.ratio||'';
   updateRer();
 }
 function updateRer(){
   const kg = parseFloat($('set-weight').value);
+  const ratio = parseFloat($('set-ratio').value)||100;
   const box = $('rer-box');
   if(kg>0){
-    const rer = Math.round(70*Math.pow(kg,0.75));
+    const rer = 70*Math.pow(kg,0.75);
+    const target = Math.round(rer*ratio/100);
     box.classList.remove('hidden');
-    box.innerHTML = '💡 按 '+kg+'kg 估算：静息需求 RER ≈ <b>'+rer+'</b> kcal，'
-      +'绝育成猫建议 ≈ <b>'+Math.round(rer*1.2)+'</b> kcal '
+    box.innerHTML = '💡 RER = 70 × '+kg+'<sup>0.75</sup> ≈ <b>'+Math.round(rer)+'</b> kcal × '+ratio+'% → 建议目标 <b>'+target+'</b> kcal '
       +'<a href="#" class="settings-link" id="use-rer">采用</a>';
-    $('use-rer').onclick = e=>{ e.preventDefault(); $('set-target').value = Math.round(rer*1.2); };
+    $('use-rer').onclick = e=>{ e.preventDefault(); $('set-target').value = target; };
   }else box.classList.add('hidden');
 }
 $('set-weight').oninput = updateRer;
+$('set-ratio').oninput = updateRer;
 $('btn-save-profile').onclick = ()=>{
   S.profile.name = $('set-name').value.trim()||'小猫咪';
   S.profile.targetKcal = parseFloat($('set-target').value)||0;
+  S.profile.ratio = parseFloat($('set-ratio').value)||100;
   S.profile.weightKg = parseFloat($('set-weight').value)||0;
   save(); renderHome(); toast('保存好啦 💾');
 };
