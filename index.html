@@ -53,8 +53,8 @@ header .page-ico{width:24px;height:24px;vertical-align:-5px}
 .remain-num.over{color:var(--danger)}
 .remain-label{font-size:.85rem;color:var(--ink-soft);margin-top:2px}
 .sub-title{font-size:.9rem;color:var(--ink-soft);text-align:center;margin:-6px 0 10px}
-.pct-col{display:flex;flex-direction:column;gap:10px;margin:12px 0}
-.big-pct{padding:22px 0;font-size:1.4rem;border:2.5px solid var(--ink);border-radius:var(--hand2);background:#fff;font-weight:800;text-align:center}
+.pct-col{display:flex;gap:8px;margin:10px 0}
+.big-pct{flex:1;padding:10px 0;font-size:.9rem;border:1.8px solid var(--ink);border-radius:var(--hand2);background:#fff;font-weight:700;text-align:center}
 .big-pct.on{background:var(--pink-deep);color:#fff;box-shadow:3px 4px 0 rgba(107,74,86,.2)}
 .bar-wrap{margin:16px 4px 6px;position:relative}
 .bar{
@@ -175,12 +175,6 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 .sheet.show{transform:translateY(0)}
 .sheet-handle{width:44px;height:5px;border-radius:99px;background:var(--pink);margin:0 auto 14px}
 .sheet h2{font-size:1.05rem;text-align:center;margin-bottom:14px}
-.pct-row{display:flex;gap:7px;margin:10px 0}
-.pct-btn{
-  flex:1;padding:7px 0;border:1.8px solid var(--ink);border-radius:var(--hand2);
-  background:#fff;font-weight:700;font-size:.82rem;
-}
-.pct-btn.on{background:var(--pink-deep);color:#fff;box-shadow:2px 3px 0 rgba(107,74,86,.2)}
 .slider-row{display:flex;align-items:center;gap:12px;margin:6px 0 4px}
 .slider-row input[type=range]{flex:1;accent-color:var(--pink-deep);height:32px}
 .slider-val{font-weight:800;min-width:52px;text-align:right}
@@ -284,10 +278,10 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
       <div class="sub-title">吃了多少呀？</div>
       <div id="pct-zone">
         <div class="pct-col">
-          <button class="big-pct on" data-pct="100">💯 全部吃完</button>
-          <button class="big-pct" data-pct="75">😋 吃了 75%</button>
-          <button class="big-pct" data-pct="50">🙂 吃了一半</button>
-          <button class="big-pct" data-pct="25">🤏 只吃了一点</button>
+          <button class="big-pct on" data-pct="100">💯 全部</button>
+          <button class="big-pct" data-pct="75">😋 75%</button>
+          <button class="big-pct" data-pct="50">🙂 一半</button>
+          <button class="big-pct" data-pct="25">🤏 一点</button>
         </div>
         <div class="slider-row">
           <input type="range" id="pct-slider" min="1" max="100" step="1" value="100">
@@ -299,9 +293,9 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
       </div>
       <div id="count-zone" class="hidden">
         <div class="pct-col">
-          <button class="big-pct on" data-cnt="1">🦐 1 只</button>
-          <button class="big-pct" data-cnt="2">🦐 2 只</button>
-          <button class="big-pct" data-cnt="3">🦐 3 只</button>
+          <button class="big-pct on" data-cnt="1">1 只</button>
+          <button class="big-pct" data-cnt="2">2 只</button>
+          <button class="big-pct" data-cnt="3">3 只</button>
         </div>
         <div class="slider-row">
           <input type="range" id="cnt-slider" min="1" max="10" step="1" value="1">
