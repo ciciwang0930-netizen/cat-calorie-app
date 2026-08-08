@@ -76,6 +76,7 @@ header .page-ico{width:24px;height:24px;vertical-align:-5px}
   margin:22px 20px 10px;font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:8px;
 }
 .section-title::after{content:"";flex:1;border-top:2px dashed var(--pink)}
+.fish-ico{height:22px;vertical-align:-6px}
 .timeline{padding:0 20px;display:flex;flex-direction:column;gap:10px}
 .meal-card{
   background:var(--card);border:2px solid var(--ink);border-radius:var(--hand2);
@@ -261,7 +262,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
     </div>
   </div>
 
-  <div class="section-title">今日进食 🐟</div>
+  <div class="section-title">今日进食 <img class="fish-ico" src="fish.png" alt=""></div>
   <div class="timeline" id="timeline"></div>
   <div class="empty-tip hidden" id="empty-tip">今天还没有记录哦<br>点下面的小按钮记一餐吧 🐾</div>
 
@@ -295,6 +296,17 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
       </div>
       <div id="grams-zone" class="hidden">
         <div class="field"><label>吃了多少克 (g)</label><input id="grams-input" type="number" inputmode="decimal" placeholder="如 40"></div>
+      </div>
+      <div id="count-zone" class="hidden">
+        <div class="pct-col">
+          <button class="big-pct on" data-cnt="1">🦐 1 只</button>
+          <button class="big-pct" data-cnt="2">🦐 2 只</button>
+          <button class="big-pct" data-cnt="3">🦐 3 只</button>
+        </div>
+        <div class="slider-row">
+          <input type="range" id="cnt-slider" min="1" max="10" step="1" value="1">
+          <span class="slider-val" id="cnt-val">1只</span>
+        </div>
       </div>
       <div class="kcal-preview"><span id="preview-kcal">0</span> kcal<small id="preview-formula"></small></div>
       <div class="field"><label>时间（默认现在，点我修改）</label><button class="time-btn" id="meal-time-btn">现在 🐾</button></div>
@@ -492,7 +504,7 @@ function defaultFoods(){
     F('鲜朗','猫粮',531.7,'',true),
     // ── 其他类 ──
     F('虾仁','其他',10,'1只'),
-  ];
+  ].map(f=>f.name==='虾仁' ? Object.assign(f,{countMode:true, unit:'只'}) : f);
 }
 
 function defaultState(){
@@ -514,6 +526,13 @@ function load(){
     st.seedVersion = SEED_VERSION;
     localStorage.setItem(LS_KEY, JSON.stringify(st));
     st._justReseeded = true;
+  }
+  // 一次性迁移：虾仁启用个数模式
+  if(!st._countMigrated){
+    const f = st.foods.find(x=>x.name==='虾仁');
+    if(f){ f.countMode = true; f.unit = '只'; }
+    st._countMigrated = true;
+    localStorage.setItem(LS_KEY, JSON.stringify(st));
   }
   return st;
 }
@@ -617,7 +636,7 @@ function renderHome(){
     const food = m.foodId ? S.foods.find(f=>f.id===m.foodId) : null;
     const emoji = food ? (TYPE_EMOJI[food.type]||'🍽️') : '✏️';
     const name = food ? food.name : (m.customName||'手动记录');
-    const sub = fmtTime(m.timestamp) + (m.percent? ' · 吃了'+m.percent+'%' : (m.grams? ' · '+m.grams+'g' : ''));
+    const sub = fmtTime(m.timestamp) + (m.count? ' · '+m.count+((food&&food.unit)||'只') : (m.percent? ' · 吃了'+m.percent+'%' : (m.grams? ' · '+m.grams+'g' : '')));
     card.innerHTML = '<span class="meal-emoji">'+emoji+'</span>'
       +'<div class="meal-info"><div class="meal-name"></div><div class="meal-sub">'+sub+'</div></div>'
       +'<span class="meal-kcal">'+Math.round(m.kcal)+' kcal</span>'
@@ -633,7 +652,7 @@ function renderHome(){
 }
 
 /* ═══════════════ 记一餐 ═══════════════ */
-let pickedFood = null, curPct = 100;
+let pickedFood = null, curPct = 100, curCnt = 1;
 
 function openSheet(id){
   $('mask').classList.add('show');
@@ -674,11 +693,14 @@ function renderPickList(q){
 function openAmount(){
   goStep('step-amount');
   $('amount-title').textContent = pickedFood.name + ' 吃了多少？';
+  const isCount = !!pickedFood.countMode;
   const isPack = pickedFood.kcalPerPack != null;
-  $('pct-zone').classList.toggle('hidden', !isPack);
-  $('grams-zone').classList.toggle('hidden', isPack);
+  $('pct-zone').classList.toggle('hidden', !isPack || isCount);
+  $('grams-zone').classList.toggle('hidden', isPack || isCount);
+  $('count-zone').classList.toggle('hidden', !isCount);
   $('meal-time-btn').textContent = '现在 🐾'; mealTimeVal = Date.now();
-  if(isPack){ setPct(100); $('pct-slider').value=100; }
+  if(isCount){ setCnt(1); $('cnt-slider').value=1; }
+  else if(isPack){ setPct(100); $('pct-slider').value=100; }
   else { $('grams-input').value=''; updatePreview(); }
 }
 
@@ -688,9 +710,18 @@ function setPct(p){
   document.querySelectorAll('.big-pct').forEach(b=>b.classList.toggle('on', +b.dataset.pct===p));
   updatePreview();
 }
+function setCnt(c){
+  curCnt = c;
+  $('cnt-val').textContent = c + ((pickedFood&&pickedFood.unit)||'只');
+  document.querySelectorAll('.big-pct[data-cnt]').forEach(b=>b.classList.toggle('on', +b.dataset.cnt===c));
+  updatePreview();
+}
 function updatePreview(){
   let kcal = 0, formula = '';
-  if(pickedFood.kcalPerPack != null){
+  if(pickedFood.countMode){
+    kcal = pickedFood.kcalPerPack * curCnt;
+    formula = pickedFood.kcalPerPack+' kcal × '+curCnt+((pickedFood.unit)||'只');
+  }else if(pickedFood.kcalPerPack != null){
     kcal = pickedFood.kcalPerPack * curPct/100;
     formula = pickedFood.kcalPerPack+' kcal × '+curPct+'%';
   }else{
@@ -702,7 +733,9 @@ function updatePreview(){
   $('preview-formula').textContent = formula;
 }
 
-document.querySelectorAll('.big-pct').forEach(b=>{ b.onclick = ()=>{ $('pct-slider').value=b.dataset.pct; setPct(+b.dataset.pct); }; });
+document.querySelectorAll('.big-pct[data-pct]').forEach(b=>{ b.onclick = ()=>{ $('pct-slider').value=b.dataset.pct; setPct(+b.dataset.pct); }; });
+document.querySelectorAll('.big-pct[data-cnt]').forEach(b=>{ b.onclick = ()=>{ $('cnt-slider').value=b.dataset.cnt; setCnt(+b.dataset.cnt); }; });
+$('cnt-slider').oninput = e=>setCnt(+e.target.value);
 $('pct-slider').oninput = e=>setPct(+e.target.value);
 $('grams-input').oninput = updatePreview;
 
@@ -722,7 +755,10 @@ $('btn-save-meal').onclick = ()=>{
   let kcal;
   const meal = {id:uid(), foodId:pickedFood.id, customName:null, percent:null, grams:null, kcal:0,
     timestamp: mealTimeVal || Date.now()};
-  if(pickedFood.kcalPerPack != null){
+  if(pickedFood.countMode){
+    meal.count = curCnt;
+    kcal = pickedFood.kcalPerPack * curCnt;
+  }else if(pickedFood.kcalPerPack != null){
     meal.percent = curPct;
     kcal = pickedFood.kcalPerPack * curPct/100;
   }else{
