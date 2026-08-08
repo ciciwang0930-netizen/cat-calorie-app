@@ -223,6 +223,10 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 .cal-cell .dot.over{background:var(--danger)}
 .cal-legend{text-align:center;font-size:.72rem;color:var(--ink-soft);margin-top:10px}
 .cal-today-btn{margin-top:10px}
+.time-btn{width:100%;padding:11px 14px;border:2px solid var(--ink);border-radius:var(--hand2);background:var(--pink-faint);text-align:left;font-size:1rem;color:var(--ink);font-weight:600}
+.time-row{display:flex;align-items:center;justify-content:center;gap:6px;margin:16px 0 6px;font-weight:800}
+.time-row .tval{min-width:46px;text-align:center;background:var(--pink-faint);border:2px solid var(--ink);border-radius:var(--hand2);padding:8px 4px;font-size:1.25rem}
+.time-colon{font-size:1.3rem}
 .row2{display:flex;gap:10px}
 .row2 .field{flex:1}
 .danger-text{color:var(--danger);font-weight:700}
@@ -285,7 +289,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
           <button class="big-pct" data-pct="25">🤏 只吃了一点</button>
         </div>
         <div class="slider-row">
-          <input type="range" id="pct-slider" min="5" max="100" step="5" value="100">
+          <input type="range" id="pct-slider" min="1" max="100" step="1" value="100">
           <span class="slider-val" id="pct-val">100%</span>
         </div>
       </div>
@@ -293,7 +297,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
         <div class="field"><label>吃了多少克 (g)</label><input id="grams-input" type="number" inputmode="decimal" placeholder="如 40"></div>
       </div>
       <div class="kcal-preview"><span id="preview-kcal">0</span> kcal<small id="preview-formula"></small></div>
-      <div class="field"><label>时间（默认现在，可补录）</label><input id="meal-time" type="datetime-local"></div>
+      <div class="field"><label>时间（默认现在，点我修改）</label><button class="time-btn" id="meal-time-btn">现在 🐾</button></div>
       <button class="btn btn-primary btn-block" id="btn-save-meal">记下啦 ✅</button>
       <button class="btn btn-ghost btn-block" id="back-pick" style="margin-top:8px">‹ 重选食物</button>
     </div>
@@ -301,7 +305,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
       <h2 style="text-align:center;font-size:1.05rem;margin-bottom:12px">手动记一笔 ✏️</h2>
       <div class="field"><label>吃了什么</label><input id="custom-name" placeholder="如：冻干零食几颗"></div>
       <div class="field"><label>估算热量 (kcal)</label><input id="custom-kcal" type="number" inputmode="decimal" placeholder="如 30"></div>
-      <div class="field"><label>时间</label><input id="custom-time" type="datetime-local"></div>
+      <div class="field"><label>时间</label><button class="time-btn" id="custom-time-btn">现在 🐾</button></div>
       <button class="btn btn-primary btn-block" id="btn-save-custom">记下啦 ✅</button>
       <button class="btn btn-ghost btn-block" id="back-pick2" style="margin-top:8px">‹ 返回选食物</button>
     </div>
@@ -358,7 +362,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
 <!-- ═══════════ 底部 Tab ═══════════ -->
 <nav>
-  <button data-tab="home" class="on"><img class="tico" src="tab-home.png" alt="">今日</button>
+  <button data-tab="home" class="on"><img class="tico" src="tab-home.png" alt=""><span id="tab-label-home">今日</span></button>
   <button data-tab="foods"><img class="tico" src="tab-foods.png" alt="">猫粮库</button>
   <button data-tab="me"><span class="ico">🎀</span>我的</button>
 </nav>
@@ -399,6 +403,27 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   <div class="batch-err" id="batch-err"></div>
   <div class="batch-preview" id="batch-preview"></div>
   <button class="btn btn-primary btn-block" id="btn-do-batch" style="margin-top:12px">解析并入库 🚀</button>
+</div>
+
+<!-- ═══════════ 时间选择 Sheet（手绘风） ═══════════ -->
+<div class="sheet" id="sheet-time">
+  <div class="sheet-handle"></div>
+  <div class="cal-head">
+    <button class="date-arrow" id="tcal-prev">‹</button>
+    <div id="tcal-title"></div>
+    <button class="date-arrow" id="tcal-next">›</button>
+  </div>
+  <div class="cal-week"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+  <div class="cal-grid" id="tcal-grid"></div>
+  <div class="time-row">
+    <button class="date-arrow" id="hour-minus">‹</button><span class="tval" id="hour-val">12</span><button class="date-arrow" id="hour-plus">›</button>
+    <span class="time-colon">:</span>
+    <button class="date-arrow" id="min-minus">‹</button><span class="tval" id="min-val">30</span><button class="date-arrow" id="min-plus">›</button>
+  </div>
+  <div class="row2" style="margin-top:10px">
+    <button class="btn" style="flex:1" id="time-now">现在 🐾</button>
+    <button class="btn btn-primary" style="flex:1" id="time-ok">确定 ✅</button>
+  </div>
 </div>
 
 <!-- ═══════════ 日历 Sheet ═══════════ -->
@@ -652,7 +677,7 @@ function openAmount(){
   const isPack = pickedFood.kcalPerPack != null;
   $('pct-zone').classList.toggle('hidden', !isPack);
   $('grams-zone').classList.toggle('hidden', isPack);
-  $('meal-time').value = toLocalInput();
+  $('meal-time-btn').textContent = '现在 🐾'; mealTimeVal = Date.now();
   if(isPack){ setPct(100); $('pct-slider').value=100; }
   else { $('grams-input').value=''; updatePreview(); }
 }
@@ -690,13 +715,13 @@ $('pick-search').oninput = e=>renderPickList(e.target.value.trim());
 $('back-pick').onclick = ()=>goStep('step-pick');
 $('back-pick2').onclick = ()=>goStep('step-pick');
 $('back-home-1').onclick = ()=>switchTab('home');
-$('btn-custom').onclick = ()=>{ goStep('step-custom'); $('custom-time').value=toLocalInput(); };
+$('btn-custom').onclick = ()=>{ goStep('step-custom'); customTimeVal = Date.now(); $('custom-time-btn').textContent = '现在 🐾'; };
 
 $('btn-save-meal').onclick = ()=>{
   if(!pickedFood) return;
   let kcal;
   const meal = {id:uid(), foodId:pickedFood.id, customName:null, percent:null, grams:null, kcal:0,
-    timestamp: $('meal-time').value ? new Date($('meal-time').value).getTime() : Date.now()};
+    timestamp: mealTimeVal || Date.now()};
   if(pickedFood.kcalPerPack != null){
     meal.percent = curPct;
     kcal = pickedFood.kcalPerPack * curPct/100;
@@ -717,7 +742,7 @@ $('btn-save-custom').onclick = ()=>{
   if(!kcal || kcal<=0){ toast('填一下热量哦'); return; }
   S.meals.push({id:uid(), foodId:null, customName:$('custom-name').value.trim()||'手动记录',
     percent:null, grams:null, kcal:Math.round(kcal*10)/10,
-    timestamp: $('custom-time').value ? new Date($('custom-time').value).getTime() : Date.now()});
+    timestamp: customTimeVal || Date.now()});
   $('custom-name').value=''; $('custom-kcal').value='';
   save(); switchTab('home'); pawRain(); toast('记下啦 +'+kcal+' kcal 🐾');
 };
@@ -928,6 +953,46 @@ function renderCal(){
   }
 }
 
+/* ═══════════════ 手绘时间选择器 ═══════════════ */
+let mealTimeVal = null, customTimeVal = null;
+let timeSel = null, timeTarget = 'meal', tcalCursor = null;
+function fmtTimeBtn(ts){
+  if(!ts) return '现在 🐾';
+  const d = new Date(ts);
+  const hm = String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  return todayKey(ts)===todayKey() ? '今天 '+hm : (d.getMonth()+1)+'月'+d.getDate()+'日 '+hm;
+}
+function openTimePicker(target){
+  timeTarget = target;
+  timeSel = (target==='meal'?mealTimeVal:customTimeVal) || Date.now();
+  tcalCursor = new Date(timeSel);
+  renderTcal(); updateTimeVals();
+  openSheet('sheet-time');
+}
+function renderTcal(){
+  const y=tcalCursor.getFullYear(), m=tcalCursor.getMonth();
+  $('tcal-title').textContent = y+'年'+(m+1)+'月';
+  const lead=(new Date(y,m,1).getDay()+6)%7, days=new Date(y,m+1,0).getDate();
+  const grid=$('tcal-grid'); grid.innerHTML='';
+  const selKey=todayKey(timeSel), tk=todayKey();
+  for(let i=0;i<lead;i++) grid.appendChild(document.createElement('div'));
+  for(let d=1;d<=days;d++){
+    const key=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const c=document.createElement('button');
+    c.className='cal-cell'; c.textContent=d;
+    if(key===tk) c.classList.add('today');
+    if(key===selKey) c.classList.add('sel');
+    c.onclick=()=>{ const nd=new Date(timeSel); nd.setFullYear(y,m,d); timeSel=nd.getTime(); renderTcal(); };
+    grid.appendChild(c);
+  }
+}
+function updateTimeVals(){
+  const d=new Date(timeSel);
+  $('hour-val').textContent=String(d.getHours()).padStart(2,'0');
+  $('min-val').textContent=String(d.getMinutes()).padStart(2,'0');
+  if(todayKey(timeSel)!==todayKey(tcalCursor.getTime())){ tcalCursor=new Date(timeSel); renderTcal(); }
+}
+
 /* ═══════════════ 启动 ═══════════════ */
 if('serviceWorker' in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
@@ -938,6 +1003,21 @@ $('today-date').onclick = openCal;
 $('cal-prev').onclick = ()=>{ calCursor.setMonth(calCursor.getMonth()-1); renderCal(); };
 $('cal-next').onclick = ()=>{ calCursor.setMonth(calCursor.getMonth()+1); renderCal(); };
 $('cal-today').onclick = ()=>{ viewDate=todayKey(); closeSheets(); renderHome(); };
+$('meal-time-btn').onclick = ()=>openTimePicker('meal');
+$('custom-time-btn').onclick = ()=>openTimePicker('custom');
+$('tcal-prev').onclick = ()=>{ tcalCursor.setMonth(tcalCursor.getMonth()-1); renderTcal(); };
+$('tcal-next').onclick = ()=>{ tcalCursor.setMonth(tcalCursor.getMonth()+1); renderTcal(); };
+$('hour-minus').onclick = ()=>{ timeSel-=3600000; updateTimeVals(); };
+$('hour-plus').onclick = ()=>{ timeSel+=3600000; updateTimeVals(); };
+$('min-minus').onclick = ()=>{ timeSel-=300000; updateTimeVals(); };
+$('min-plus').onclick = ()=>{ timeSel+=300000; updateTimeVals(); };
+$('time-now').onclick = ()=>{ timeSel=Date.now(); tcalCursor=new Date(timeSel); renderTcal(); updateTimeVals(); };
+$('time-ok').onclick = ()=>{
+  if(timeTarget==='meal') mealTimeVal=timeSel; else customTimeVal=timeSel;
+  const btn = timeTarget==='meal' ? $('meal-time-btn') : $('custom-time-btn');
+  btn.textContent = fmtTimeBtn(timeSel);
+  closeSheets();
+};
 renderHome();
 if(S._justReseeded){ delete S._justReseeded; setTimeout(()=>toast('猫粮库已更新为最新录入 🍖'), 600); }
 </script>
