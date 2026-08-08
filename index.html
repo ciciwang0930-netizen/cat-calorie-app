@@ -54,7 +54,7 @@ header .page-ico{width:24px;height:24px;vertical-align:-5px}
 .remain-label{font-size:.85rem;color:var(--ink-soft);margin-top:2px}
 .sub-title{font-size:.9rem;color:var(--ink-soft);text-align:center;margin:-6px 0 10px}
 .pct-col{display:flex;gap:8px;margin:10px 0}
-.big-pct{flex:1;padding:10px 0;font-size:.9rem;border:1.8px solid var(--ink);border-radius:var(--hand2);background:#fff;font-weight:700;text-align:center}
+.big-pct{flex:1;padding:10px 0;border:1.8px solid var(--ink);border-radius:var(--hand2);background:#fff;font-weight:700;text-align:center;font-family:"Chalkboard SE","Marker Felt",-apple-system,sans-serif;font-size:1.05rem;letter-spacing:.02em}
 .big-pct.on{background:var(--pink-deep);color:#fff;box-shadow:3px 4px 0 rgba(107,74,86,.2)}
 .bar-wrap{margin:16px 4px 6px;position:relative}
 .bar{
@@ -278,10 +278,10 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
       <div class="sub-title">吃了多少呀？</div>
       <div id="pct-zone">
         <div class="pct-col">
-          <button class="big-pct on" data-pct="100">💯 全部</button>
-          <button class="big-pct" data-pct="75">😋 75%</button>
-          <button class="big-pct" data-pct="50">🙂 一半</button>
-          <button class="big-pct" data-pct="25">🤏 一点</button>
+          <button class="big-pct on" data-pct="100">100%</button>
+          <button class="big-pct" data-pct="75">75%</button>
+          <button class="big-pct" data-pct="50">50%</button>
+          <button class="big-pct" data-pct="25">25%</button>
         </div>
         <div class="slider-row">
           <input type="range" id="pct-slider" min="1" max="100" step="1" value="100">
@@ -361,7 +361,8 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 v1.0 · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v17</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
 </div>
@@ -1026,7 +1027,17 @@ function updateTimeVals(){
 /* ═══════════════ 启动 ═══════════════ */
 if('serviceWorker' in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
+  // 每次启动主动检查 SW 更新
+  navigator.serviceWorker.getRegistration().then(r=>{ if(r) r.update(); }).catch(()=>{});
 }
+$('btn-update').onclick = ()=>{
+  toast('检查更新中…');
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistration().then(r=>{
+      if(r) return r.update();
+    }).then(()=>setTimeout(()=>location.reload(), 800)).catch(()=>location.reload());
+  }else location.reload();
+};
 $('date-prev').onclick = ()=>{ const d=new Date(viewDate+'T12:00:00'); d.setDate(d.getDate()-1); viewDate=todayKey(d.getTime()); renderHome(); };
 $('date-next').onclick = ()=>{ if(viewDate===todayKey())return; const d=new Date(viewDate+'T12:00:00'); d.setDate(d.getDate()+1); viewDate=todayKey(d.getTime()); renderHome(); };
 $('today-date').onclick = openCal;
