@@ -170,7 +170,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   background:var(--bg);border:2.5px solid var(--ink);border-bottom:none;
   border-radius:26px 26px 0 0;padding:18px 20px calc(20px + env(safe-area-inset-bottom));
   transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.9,.35,1);
-  overflow-y:auto;
+  overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
 }
 .sheet.show{transform:translateY(0)}
 .sheet-handle{width:44px;height:5px;border-radius:99px;background:var(--pink);margin:0 auto 14px}
@@ -219,8 +219,10 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 .cal-legend{text-align:center;font-size:.72rem;color:var(--ink-soft);margin-top:10px}
 .cal-today-btn{margin-top:10px}
 .time-btn{width:100%;padding:11px 14px;border:2px solid var(--ink);border-radius:var(--hand2);background:var(--pink-faint);text-align:left;font-size:1rem;color:var(--ink);font-weight:600}
-.time-row{display:flex;align-items:center;justify-content:center;gap:6px;margin:16px 0 6px;font-weight:800}
-.time-row .tval{min-width:46px;text-align:center;background:var(--pink-faint);border:2px solid var(--ink);border-radius:var(--hand2);padding:8px 4px;font-size:1.25rem}
+.time-row{display:flex;align-items:center;justify-content:center;gap:8px;margin:16px 0 6px;font-weight:800}
+.time-row .tval{min-width:52px;text-align:center;background:var(--pink-faint);border:2px solid var(--ink);border-radius:var(--hand2);padding:10px 6px;font-size:1.3rem}
+.time-row .date-arrow{font-size:1.5rem;padding:10px 18px;border:2px solid var(--ink);border-radius:var(--hand2);background:#fff;box-shadow:2px 3px 0 rgba(107,74,86,.15);touch-action:manipulation}
+.time-row .date-arrow:active{transform:translateY(2px);box-shadow:none}
 .time-colon{font-size:1.3rem}
 .row2{display:flex;gap:10px}
 .row2 .field{flex:1}
@@ -362,7 +364,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v18</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v19</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -1053,10 +1055,13 @@ $('meal-time-btn').onclick = ()=>openTimePicker('meal');
 $('custom-time-btn').onclick = ()=>openTimePicker('custom');
 $('tcal-prev').onclick = ()=>{ tcalCursor.setMonth(tcalCursor.getMonth()-1); renderTcal(); };
 $('tcal-next').onclick = ()=>{ tcalCursor.setMonth(tcalCursor.getMonth()+1); renderTcal(); };
-$('hour-minus').onclick = ()=>{ timeSel-=3600000; updateTimeVals(); };
-$('hour-plus').onclick = ()=>{ timeSel+=3600000; updateTimeVals(); };
-$('min-minus').onclick = ()=>{ timeSel-=300000; updateTimeVals(); };
-$('min-plus').onclick = ()=>{ timeSel+=300000; updateTimeVals(); };
+/* 时/分在当天内循环，不跨天（避免改掉用户选好的日期） */
+function stepHour(dh){ const d=new Date(timeSel); d.setHours((d.getHours()+dh+24)%24); timeSel=d.getTime(); updateTimeVals(); }
+function stepMin(dm){ const d=new Date(timeSel); const m=(d.getMinutes()+dm+60)%60; d.setMinutes(m); timeSel=d.getTime(); updateTimeVals(); }
+$('hour-minus').onclick = ()=>stepHour(-1);
+$('hour-plus').onclick = ()=>stepHour(1);
+$('min-minus').onclick = ()=>stepMin(-5);
+$('min-plus').onclick = ()=>stepMin(5);
 $('time-now').onclick = ()=>{ timeSel=Date.now(); tcalCursor=new Date(timeSel); renderTcal(); updateTimeVals(); };
 $('time-ok').onclick = ()=>{
   if(timeTarget==='meal') mealTimeVal=timeSel; else customTimeVal=timeSel;
