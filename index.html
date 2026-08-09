@@ -364,7 +364,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v19</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v20</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -393,8 +393,19 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
       <option>罐头</option><option>酱包</option><option>冻干</option><option>猫条</option><option>猫粮</option><option>其他</option>
     </select>
   </div>
+  <div class="field hidden" id="ff-unit-field"><label>单位（只/个/颗 → 按个数记；包/罐 → 按比例记）</label>
+    <select id="ff-unit">
+      <option value="只">只 · 按个数</option>
+      <option value="个">个 · 按个数</option>
+      <option value="颗">颗 · 按个数</option>
+      <option value="根">根 · 按个数</option>
+      <option value="条">条 · 按个数</option>
+      <option value="包">包 · 按比例</option>
+      <option value="罐">罐 · 按比例</option>
+    </select>
+  </div>
   <div class="row2">
-    <div class="field" id="ff-pack-field"><label>每包/每罐热量 (kcal)</label><input id="ff-pack" type="number" inputmode="decimal" placeholder="如 85"></div>
+    <div class="field" id="ff-pack-field"><label id="ff-pack-label">每包/每罐热量 (kcal)</label><input id="ff-pack" type="number" inputmode="decimal" placeholder="如 85"></div>
     <div class="field hidden" id="ff-100g-field"><label>每 100g 热量 (kcal)</label><input id="ff-100g" type="number" inputmode="decimal" placeholder="如 380"></div>
   </div>
   <div class="field"><label>规格备注（选填）</label><input id="ff-spec" placeholder="如 85g/包"></div>
@@ -460,6 +471,7 @@ const SEED_VERSION = 2;   // 内置猫粮库版本，改动此号即触发旧库
 const TYPE_EMOJI = {'罐头':'🥫','酱包':'🥣','冻干':'🍗','猫条':'🍡','猫粮':'🍘','干粮':'🍘','零食':'🍬','其他':'🍽️'};
 const TYPE_ORDER = ['罐头','酱包','冻干','猫条','猫粮','其他'];
 const DRY_TYPES = ['猫粮','干粮'];   // 按克计价（每100g kcal）的类型
+const COUNT_UNITS = ['只','个','颗','根','条'];   // 「其他」类按个数计的单位
 
 function defaultFoods(){
   const F = (name, type, kcal, spec, per100) => ({
@@ -680,7 +692,7 @@ function renderPickList(q){
   foods.forEach((f,i)=>{
     const b = document.createElement('button');
     b.className = 'pick-food' + (i<3 && !q ? ' hot':'');
-    const kcalTxt = f.kcalPerPack!=null ? f.kcalPerPack+' kcal/包' : f.kcalPer100g+' kcal/100g';
+    const kcalTxt = f.kcalPerPack!=null ? f.kcalPerPack+' kcal/'+((f.countMode&&f.unit)?f.unit:'包') : f.kcalPer100g+' kcal/100g';
     b.innerHTML = '<span>'+(TYPE_EMOJI[f.type]||'🍽️')+'</span><span class="fn"></span><span class="pf-k">'+kcalTxt+'</span>';
     b.querySelector('.fn').textContent = f.name;
     b.onclick = ()=>{ pickedFood = f; openAmount(); };
@@ -697,7 +709,11 @@ function openAmount(){
   $('grams-zone').classList.toggle('hidden', isPack || isCount);
   $('count-zone').classList.toggle('hidden', !isCount);
   $('meal-time-btn').textContent = '现在 🐾'; mealTimeVal = Date.now();
-  if(isCount){ setCnt(1); $('cnt-slider').value=1; }
+  if(isCount){
+    const u = pickedFood.unit||'只';
+    document.querySelectorAll('.big-pct[data-cnt]').forEach(b=>{ b.textContent = b.dataset.cnt+' '+u; });
+    setCnt(1); $('cnt-slider').value=1;
+  }
   else if(isPack){ setPct(100); $('pct-slider').value=100; }
   else { $('grams-input').value=''; updatePreview(); }
 }
@@ -802,7 +818,7 @@ function renderFoods(){
     h.textContent = (TYPE_EMOJI[t]||'🍽️')+' '+t; box.appendChild(h);
     list.forEach(f=>{
       const it = document.createElement('div'); it.className='food-item';
-      const kcalTxt = f.kcalPerPack!=null ? f.kcalPerPack+' kcal/包' : f.kcalPer100g+' kcal/100g';
+      const kcalTxt = f.kcalPerPack!=null ? f.kcalPerPack+' kcal/'+((f.countMode&&f.unit)?f.unit:'包') : f.kcalPer100g+' kcal/100g';
       it.innerHTML = '<div class="fi"><div class="fn"></div><div class="fs">'
         +'<span class="type-pill"></span>'+(f.spec||'')+'</div></div>'
         +'<span class="fk">'+kcalTxt+'</span>'
@@ -832,15 +848,24 @@ function openFoodForm(f){
   $('ff-pack').value = f&&f.kcalPerPack!=null?f.kcalPerPack:'';
   $('ff-100g').value = f&&f.kcalPer100g!=null?f.kcalPer100g:'';
   $('ff-spec').value = f?(f.spec||''):'';
+  $('ff-unit').value = f ? (f.unit || (f.countMode ? '只' : '包')) : '只';
   toggleKcalField();
   openSheet('sheet-food');
 }
 function toggleKcalField(){
-  const isDry = DRY_TYPES.includes($('ff-type').value);
+  const t = $('ff-type').value;
+  const isDry = DRY_TYPES.includes(t);
   $('ff-pack-field').classList.toggle('hidden', isDry);
   $('ff-100g-field').classList.toggle('hidden', !isDry);
+  $('ff-unit-field').classList.toggle('hidden', t!=='其他');
+  updatePackLabel();
+}
+function updatePackLabel(){
+  const t = $('ff-type').value, u = $('ff-unit').value;
+  $('ff-pack-label').textContent = (t==='其他' && COUNT_UNITS.includes(u)) ? '每'+u+'热量 (kcal)' : '每包/每罐热量 (kcal)';
 }
 $('ff-type').onchange = toggleKcalField;
+$('ff-unit').onchange = updatePackLabel;
 $('btn-food-add').onclick = ()=>{ recordReturn = $('page-record').classList.contains('hidden') ? 'home' : 'pick'; openFoodForm(null); };
 $('btn-food-batch').onclick = ()=>{ $('batch-err').textContent=''; $('batch-preview').innerHTML=''; openSheet('sheet-batch'); };
 
@@ -854,6 +879,12 @@ $('btn-save-food').onclick = ()=>{
   const data = {name, type, spec:$('ff-spec').value.trim(),
     kcalPerPack: isDry ? null : (pack||null),
     kcalPer100g: isDry ? (per100||null) : null};
+  if(type==='其他'){
+    data.unit = $('ff-unit').value;
+    data.countMode = COUNT_UNITS.includes(data.unit);   // 只/个/颗等→按个数；包/罐→按比例
+  }else{
+    data.countMode = false;
+  }
   if(data.kcalPerPack==null && data.kcalPer100g==null){ toast('填一下热量哦'); return; }
   if(editingFoodId){
     const f = S.foods.find(x=>x.id===editingFoodId);

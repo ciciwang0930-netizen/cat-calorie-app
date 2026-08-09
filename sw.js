@@ -1,4 +1,4 @@
-const CACHE = 'neko-kcal-v19';
+const CACHE = 'neko-kcal-v20';
 const ASSETS = ['./index.html', './manifest.json', './icon-180.png', './icon-512.png', './avatar.png', './tab-home.png', './tab-foods.png', './'];
 
 self.addEventListener('install', e => {
