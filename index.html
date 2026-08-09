@@ -364,7 +364,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v21</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v22</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -393,7 +393,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
       <option>罐头</option><option>酱包</option><option>冻干</option><option>猫条</option><option>猫粮</option><option>其他</option>
     </select>
   </div>
-  <div class="field hidden" id="ff-unit-field"><label>单位（只/个/颗 → 按个数记；包/罐 → 按比例记）</label>
+  <div class="field hidden" id="ff-unit-field"><label>单位（只/个/颗 → 按个数；包/罐 → 按比例；克 → 按重量）</label>
     <select id="ff-unit">
       <option value="只">只 · 按个数</option>
       <option value="个">个 · 按个数</option>
@@ -402,6 +402,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
       <option value="条">条 · 按个数</option>
       <option value="包">包 · 按比例</option>
       <option value="罐">罐 · 按比例</option>
+      <option value="克">克 · 按重量</option>
     </select>
   </div>
   <div class="row2">
@@ -848,13 +849,17 @@ function openFoodForm(f){
   $('ff-pack').value = f&&f.kcalPerPack!=null?f.kcalPerPack:'';
   $('ff-100g').value = f&&f.kcalPer100g!=null?f.kcalPer100g:'';
   $('ff-spec').value = f?(f.spec||''):'';
-  $('ff-unit').value = f ? (f.unit || (f.countMode ? '只' : '包')) : '只';
+  $('ff-unit').value = f ? (f.unit || (f.countMode ? '只' : (f.kcalPer100g!=null ? '克' : '包'))) : '只';
   toggleKcalField();
   openSheet('sheet-food');
 }
+function isGramsMode(){
+  const t = $('ff-type').value;
+  return DRY_TYPES.includes(t) || (t==='其他' && $('ff-unit').value==='克');
+}
 function toggleKcalField(){
   const t = $('ff-type').value;
-  const isDry = DRY_TYPES.includes(t);
+  const isDry = isGramsMode();
   $('ff-pack-field').classList.toggle('hidden', isDry);
   $('ff-100g-field').classList.toggle('hidden', !isDry);
   $('ff-unit-field').classList.toggle('hidden', t!=='其他');
@@ -865,7 +870,7 @@ function updatePackLabel(){
   $('ff-pack-label').textContent = (t==='其他' && COUNT_UNITS.includes(u)) ? '每'+u+'热量 (kcal)' : '每包/每罐热量 (kcal)';
 }
 $('ff-type').onchange = toggleKcalField;
-$('ff-unit').onchange = updatePackLabel;
+$('ff-unit').onchange = toggleKcalField;
 $('btn-food-add').onclick = ()=>{ recordReturn = $('page-record').classList.contains('hidden') ? 'home' : 'pick'; openFoodForm(null); };
 $('btn-food-batch').onclick = ()=>{ $('batch-err').textContent=''; $('batch-preview').innerHTML=''; openSheet('sheet-batch'); };
 
@@ -873,15 +878,16 @@ $('btn-save-food').onclick = ()=>{
   const name = $('ff-name').value.trim();
   if(!name){ toast('填一下名称哦'); return; }
   const type = $('ff-type').value;
-  const isDry = DRY_TYPES.includes(type);
+  const unit = type==='其他' ? $('ff-unit').value : null;
+  const isDry = DRY_TYPES.includes(type) || unit==='克';
   const pack = parseFloat($('ff-pack').value);
   const per100 = parseFloat($('ff-100g').value);
   const data = {name, type, spec:$('ff-spec').value.trim(),
     kcalPerPack: isDry ? null : (pack||null),
     kcalPer100g: isDry ? (per100||null) : null};
   if(type==='其他'){
-    data.unit = $('ff-unit').value;
-    data.countMode = COUNT_UNITS.includes(data.unit);   // 只/个/颗等→按个数；包/罐→按比例
+    data.unit = unit;
+    data.countMode = COUNT_UNITS.includes(unit);   // 只/个/颗等→按个数；包/罐→按比例；克→按重量
   }else{
     data.countMode = false;
   }
