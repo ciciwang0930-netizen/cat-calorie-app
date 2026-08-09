@@ -364,7 +364,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v20</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v21</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -646,7 +646,7 @@ function renderHome(){
     const food = m.foodId ? S.foods.find(f=>f.id===m.foodId) : null;
     const emoji = food ? (TYPE_EMOJI[food.type]||'🍽️') : '✏️';
     const name = food ? food.name : (m.customName||'手动记录');
-    const sub = fmtTime(m.timestamp) + (m.count? ' · '+m.count+((food&&food.unit)||'只') : (m.percent? ' · 吃了'+m.percent+'%' : (m.grams? ' · '+m.grams+'g' : '')));
+    const sub = fmtTime(m.timestamp);
     card.innerHTML = '<span class="meal-emoji">'+emoji+'</span>'
       +'<div class="meal-info"><div class="meal-name"></div><div class="meal-sub">'+sub+'</div></div>'
       +'<span class="meal-kcal">'+Math.round(m.kcal)+' kcal</span>'
