@@ -361,7 +361,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
       <h3>体重记录 ⚖️</h3>
       <div class="row2">
         <div class="field"><label>体重 (kg)</label><input id="w-input" type="number" inputmode="decimal" step="0.1" placeholder="如 4.2"></div>
-        <div class="field"><label>日期</label><input id="w-date" type="date"></div>
+        <div class="field"><label>日期（默认今天，点我修改）</label><button class="time-btn" id="w-date-btn">今天 🐾</button></div>
       </div>
       <button class="btn btn-primary btn-block" id="btn-add-weight">记一笔体重 ⚖️</button>
       <div id="w-chart" style="margin-top:14px"></div>
@@ -380,7 +380,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v24</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v25</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -490,6 +490,21 @@ const TYPE_ORDER = ['罐头','酱包','冻干','猫条','猫粮','其他'];
 const DRY_TYPES = ['猫粮','干粮'];   // 按克计价（每100g kcal）的类型
 const COUNT_UNITS = ['只','个','颗','根','条'];   // 「其他」类按个数计的单位
 
+/* 历史体重（截图提取，单位：斤；灌入时 ×0.5 换算 kg，按日期去重） */
+const WEIGHT_SEED_JIN = [
+  ['2025-06-02',7.76],['2025-06-06',7.92],['2025-06-13',8.04],['2025-06-20',7.9],
+  ['2025-06-28',8.09],['2025-07-04',8.07],['2025-07-11',8.2],['2025-08-08',8.54],
+  ['2025-08-15',8.67],['2025-08-22',8.7],['2025-08-29',8.79],['2025-09-06',8.78],
+  ['2025-09-12',8.7],['2025-10-22',8.41],['2025-10-28',8.45],['2025-10-31',8.51],
+  ['2025-11-09',8.34],['2025-11-22',8.4],['2025-12-06',8.42],['2025-12-21',8.45],
+  ['2025-12-31',8.44],['2026-01-14',8.77],['2026-01-18',8.73],['2026-01-24',8.89],
+  ['2026-02-01',8.75],['2026-02-07',8.96],['2026-03-01',8.58],['2026-03-17',8.57],
+  ['2026-03-29',8.58],['2026-04-05',8.54],['2026-04-13',8.41],['2026-04-25',8.66],
+  ['2026-04-30',8.48],['2026-05-11',8.5],['2026-05-30',8.73],['2026-06-07',8.67],
+  ['2026-06-15',8.74],['2026-07-02',8.84],['2026-07-10',8.93],['2026-07-18',8.95],
+  ['2026-07-26',9.05],['2026-08-05',9.08],['2026-08-09',9.13],
+];
+
 function defaultFoods(){
   const F = (name, type, kcal, spec, per100) => ({
     id: uid(), name, type, spec: spec||'', useCount: 0,
@@ -546,7 +561,7 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 function load(){
   let st = null;
   try{ const raw = localStorage.getItem(LS_KEY); if(raw) st = JSON.parse(raw); }catch(e){}
-  if(!st) return defaultState();
+  if(!st) st = defaultState();   // 全新安装也走下面的迁移（历史体重等）
   // 内置猫粮库版本升级：清空旧库，灌入新库（喂食记录不受影响）
   if(st.seedVersion !== SEED_VERSION){
     st.foods = defaultFoods();
@@ -559,6 +574,18 @@ function load(){
     const f = st.foods.find(x=>x.name==='虾仁');
     if(f){ f.countMode = true; f.unit = '只'; }
     st._countMigrated = true;
+    localStorage.setItem(LS_KEY, JSON.stringify(st));
+  }
+  // 一次性迁移：灌入历史体重（斤→kg，按日期去重，可幂等）
+  if(!st._weightsSeeded){
+    st.weights = st.weights || [];
+    WEIGHT_SEED_JIN.forEach(([date, jin])=>{
+      if(!st.weights.some(w=>w.date===date)){
+        st.weights.push({id:uid(), kg:Math.round(jin*50)/100, date});
+      }
+    });
+    if(!st.profile.weightKg) st.profile.weightKg = Math.round(WEIGHT_SEED_JIN[WEIGHT_SEED_JIN.length-1][1]*50)/100;
+    st._weightsSeeded = true;
     localStorage.setItem(LS_KEY, JSON.stringify(st));
   }
   return st;
@@ -1019,7 +1046,7 @@ function renderMe(){
   $('set-weight').value = S.profile.weightKg||'';
   $('set-ratio').value = S.profile.ratio||'';
   updateRer();
-  $('w-date').value = todayKey();
+  weightDateVal = null; $('w-date-btn').textContent = '今天 🐾';
   renderWeekStats();
   renderWeightChart();
 }
@@ -1044,12 +1071,13 @@ function renderWeekStats(){
 $('btn-add-weight').onclick = ()=>{
   const kg = parseFloat($('w-input').value);
   if(!kg || kg<=0){ toast('填一下体重哦'); return; }
-  const date = $('w-date').value || todayKey();
+  const date = todayKey(weightDateVal || Date.now());
   const exist = S.weights.find(w=>w.date===date);
   if(exist){ exist.kg = kg; } else { S.weights.push({id:uid(), kg, date}); }
   S.profile.weightKg = kg;              // 同步最新体重 → RER 建议联动
   $('set-weight').value = kg;
   $('w-input').value='';
+  weightDateVal = null; $('w-date-btn').textContent = '今天 🐾';
   save(); renderWeightChart(); updateRer(); pawRain(); toast('记下 '+kg+' kg ⚖️');
 };
 function renderWeightChart(){
@@ -1167,10 +1195,16 @@ function fmtTimeBtn(ts){
   const hm = String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
   return todayKey(ts)===todayKey() ? '今天 '+hm : (d.getMonth()+1)+'月'+d.getDate()+'日 '+hm;
 }
+let weightDateVal = null;
+function fmtDayBtn(ts){
+  if(!ts || todayKey(ts)===todayKey()) return '今天 🐾';
+  const d=new Date(ts); return (d.getMonth()+1)+'月'+d.getDate()+'日';
+}
 function openTimePicker(target){
   timeTarget = target;
-  timeSel = (target==='meal'?mealTimeVal:customTimeVal) || Date.now();
+  timeSel = (target==='meal' ? mealTimeVal : target==='custom' ? customTimeVal : weightDateVal) || Date.now();
   tcalCursor = new Date(timeSel);
+  document.querySelector('#sheet-time .time-row').style.display = target==='weight' ? 'none' : 'flex';
   renderTcal(); updateTimeVals();
   openSheet('sheet-time');
 }
@@ -1220,6 +1254,7 @@ $('cal-next').onclick = ()=>{ calCursor.setMonth(calCursor.getMonth()+1); render
 $('cal-today').onclick = ()=>{ viewDate=todayKey(); closeSheets(); renderHome(); };
 $('meal-time-btn').onclick = ()=>openTimePicker('meal');
 $('custom-time-btn').onclick = ()=>openTimePicker('custom');
+$('w-date-btn').onclick = ()=>openTimePicker('weight');
 $('tcal-prev').onclick = ()=>{ tcalCursor.setMonth(tcalCursor.getMonth()-1); renderTcal(); };
 $('tcal-next').onclick = ()=>{ tcalCursor.setMonth(tcalCursor.getMonth()+1); renderTcal(); };
 /* 时/分在当天内循环，不跨天（避免改掉用户选好的日期） */
@@ -1231,9 +1266,9 @@ $('min-minus').onclick = ()=>stepMin(-5);
 $('min-plus').onclick = ()=>stepMin(5);
 $('time-now').onclick = ()=>{ timeSel=Date.now(); tcalCursor=new Date(timeSel); renderTcal(); updateTimeVals(); };
 $('time-ok').onclick = ()=>{
-  if(timeTarget==='meal') mealTimeVal=timeSel; else customTimeVal=timeSel;
-  const btn = timeTarget==='meal' ? $('meal-time-btn') : $('custom-time-btn');
-  btn.textContent = fmtTimeBtn(timeSel);
+  if(timeTarget==='meal'){ mealTimeVal=timeSel; $('meal-time-btn').textContent = fmtTimeBtn(timeSel); }
+  else if(timeTarget==='custom'){ customTimeVal=timeSel; $('custom-time-btn').textContent = fmtTimeBtn(timeSel); }
+  else { weightDateVal=timeSel; $('w-date-btn').textContent = fmtDayBtn(timeSel); }
   closeSheets();
 };
 renderHome();
