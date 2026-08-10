@@ -353,6 +353,22 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
     </div>
 
     <div class="card">
+      <h3>本周概览 📊</h3>
+      <div id="week-stats" style="font-size:.85rem;line-height:2"></div>
+    </div>
+
+    <div class="card">
+      <h3>体重记录 ⚖️</h3>
+      <div class="row2">
+        <div class="field"><label>体重 (kg)</label><input id="w-input" type="number" inputmode="decimal" step="0.1" placeholder="如 4.2"></div>
+        <div class="field"><label>日期</label><input id="w-date" type="date"></div>
+      </div>
+      <button class="btn btn-primary btn-block" id="btn-add-weight">记一笔体重 ⚖️</button>
+      <div id="w-chart" style="margin-top:14px"></div>
+      <div id="w-list" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
       <h3>数据备份</h3>
       <p style="font-size:.78rem;color:var(--ink-soft);margin-bottom:12px;line-height:1.7">数据只存在这台手机上。建议定期导出备份到 iCloud 文件或微信收藏。</p>
       <div class="row2">
@@ -364,7 +380,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v23</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v24</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -1003,6 +1019,66 @@ function renderMe(){
   $('set-weight').value = S.profile.weightKg||'';
   $('set-ratio').value = S.profile.ratio||'';
   updateRer();
+  $('w-date').value = todayKey();
+  renderWeekStats();
+  renderWeightChart();
+}
+
+/* ═══ 本周概览 ═══ */
+function renderWeekStats(){
+  const box = $('week-stats');
+  const target = S.profile.targetKcal||0;
+  let total=0, recorded=0, ok=0, over=0;
+  for(let i=6;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const k = todayKey(d.getTime());
+    const s = S.meals.filter(m=>todayKey(m.timestamp)===k).reduce((a,m)=>a+m.kcal,0);
+    if(s>0){ recorded++; total+=s; if(target>0){ s>target ? over++ : ok++; } }
+  }
+  box.innerHTML = recorded===0 ? '本周还没有记录哦 🐾'
+    : '日均摄入 <b>'+Math.round(total/recorded)+'</b> kcal（目标 '+target+'）<br>'
+    +'达标 <b style="color:var(--pink-deep)">'+ok+'</b> 天 · 超量 <b style="color:var(--danger)">'+over+'</b> 天 · 共记录 '+recorded+' 天';
+}
+
+/* ═══ 体重记录与曲线 ═══ */
+$('btn-add-weight').onclick = ()=>{
+  const kg = parseFloat($('w-input').value);
+  if(!kg || kg<=0){ toast('填一下体重哦'); return; }
+  const date = $('w-date').value || todayKey();
+  const exist = S.weights.find(w=>w.date===date);
+  if(exist){ exist.kg = kg; } else { S.weights.push({id:uid(), kg, date}); }
+  S.profile.weightKg = kg;              // 同步最新体重 → RER 建议联动
+  $('set-weight').value = kg;
+  $('w-input').value='';
+  save(); renderWeightChart(); updateRer(); pawRain(); toast('记下 '+kg+' kg ⚖️');
+};
+function renderWeightChart(){
+  const box = $('w-chart'), list = $('w-list');
+  const ws = S.weights.slice().sort((a,b)=>a.date<b.date?-1:1);
+  if(!ws.length){ box.innerHTML='<div class="empty-tip" style="margin:0">还没有体重记录<br>每周称一次，看趋势 ⚖️</div>'; list.innerHTML=''; return; }
+  const vals = ws.map(w=>w.kg);
+  const lo = Math.floor((Math.min(...vals)-0.2)*10)/10, hi = Math.ceil((Math.max(...vals)+0.2)*10)/10;
+  const W=300,H=140,P=26;
+  const X = i => ws.length===1 ? W/2 : P + i*(W-2*P)/(ws.length-1);
+  const Y = v => H-P - (v-lo)/((hi-lo)||1)*(H-2*P);
+  let svg = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%">';
+  [hi,lo].forEach(v=>{
+    svg += '<line x1="'+P+'" y1="'+Y(v)+'" x2="'+(W-P)+'" y2="'+Y(v)+'" stroke="#F4A7BE" stroke-dasharray="4 4" stroke-width="1.5"/>'
+         + '<text x="2" y="'+(Y(v)+4)+'" font-size="9" fill="#A88390">'+v+'</text>';
+  });
+  if(ws.length>1) svg += '<polyline points="'+ws.map((w,i)=>X(i)+','+Y(w.kg)).join(' ')+'" fill="none" stroke="#E87E9F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+  ws.forEach((w,i)=>{ svg += '<circle cx="'+X(i)+'" cy="'+Y(w.kg)+'" r="4" fill="#fff" stroke="#E87E9F" stroke-width="2.5"/>'; });
+  const li = ws.length-1;
+  svg += '<text x="'+Math.min(X(li)+7,W-42)+'" y="'+(Y(ws[li].kg)-8)+'" font-size="11" font-weight="bold" fill="#E87E9F">'+ws[li].kg+'kg</text>';
+  box.innerHTML = svg + '</svg>';
+  list.innerHTML='';
+  ws.slice(-5).reverse().forEach(w=>{
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;justify-content:space-between;align-items:center;font-size:.82rem;padding:6px 4px;border-bottom:1px dashed var(--pink-pale)';
+    row.innerHTML = '<span>'+w.date+'</span><span><b>'+w.kg+'</b> kg <button class="w-del" style="color:var(--ink-soft);padding:2px 6px">✕</button></span>';
+    row.querySelector('.w-del').onclick = ()=>{ S.weights = S.weights.filter(x=>x.id!==w.id); save(); renderWeightChart(); toast('已删除'); };
+    list.appendChild(row);
+  });
 }
 function updateRer(){
   const kg = parseFloat($('set-weight').value);
