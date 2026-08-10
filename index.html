@@ -380,7 +380,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v25</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v26</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -747,7 +747,7 @@ function goStep(step){
 }
 let recordReturn = 'home';
 
-function renderPickList(q){
+function renderPickList(q, showAll){
   const box = $('pick-list'); box.innerHTML='';
   let foods = S.foods.slice();
   if(q) foods = foods.filter(f=>f.name.toLowerCase().includes(q.toLowerCase()));
@@ -756,7 +756,14 @@ function renderPickList(q){
     box.innerHTML = '<div class="empty-tip" style="margin:0">库里还没有这种食物<br>去「猫粮库」录一个吧 🍖</div>';
     return;
   }
-  foods.forEach((f,i)=>{
+  // 默认只显示常用的（用过的优先，最多 8 个）；搜索时始终全量匹配
+  let list = foods, more = 0;
+  if(!q && !showAll){
+    const used = foods.filter(f=>f.useCount>0);
+    list = (used.length ? used : foods).slice(0,8);
+    more = foods.length - list.length;
+  }
+  list.forEach((f,i)=>{
     const b = document.createElement('button');
     b.className = 'pick-food' + (i<3 && !q ? ' hot':'');
     const kcalTxt = f.kcalPerPack!=null ? f.kcalPerPack+' kcal/'+((f.countMode&&f.unit)?f.unit:'包') : f.kcalPer100g+' kcal/100g';
@@ -765,6 +772,14 @@ function renderPickList(q){
     b.onclick = ()=>{ pickedFood = f; openAmount(); };
     box.appendChild(b);
   });
+  if(more>0){
+    const b = document.createElement('button');
+    b.className = 'btn btn-ghost btn-block';
+    b.style.marginTop = '6px';
+    b.textContent = '展开全部 '+foods.length+' 种 ▾';
+    b.onclick = ()=>renderPickList('', true);
+    box.appendChild(b);
+  }
 }
 
 function openAmount(prefill){
