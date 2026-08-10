@@ -384,7 +384,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v27</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v28</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -1070,13 +1070,16 @@ function renderMe(){
   renderWeightChart();
 }
 
-/* ═══ 本周概览 ═══ */
+/* ═══ 本周概览（自然周：周一 ~ 今天） ═══ */
 function renderWeekStats(){
   const box = $('week-stats');
   const target = S.profile.targetKcal||0;
+  const now = new Date();
+  const monday = new Date(now); monday.setDate(now.getDate() - (now.getDay()+6)%7);   // 本周一
   let total=0, recorded=0, ok=0, over=0;
-  for(let i=6;i>=0;i--){
-    const d=new Date(); d.setDate(d.getDate()-i);
+  for(let i=0;i<7;i++){
+    const d = new Date(monday); d.setDate(monday.getDate()+i);
+    if(d.getTime() > now.getTime()) break;   // 还没到的那天不算
     const k = todayKey(d.getTime());
     const s = S.meals.filter(m=>todayKey(m.timestamp)===k).reduce((a,m)=>a+m.kcal,0);
     if(s>0){ recorded++; total+=s; if(target>0){ s>target ? over++ : ok++; } }
