@@ -79,7 +79,10 @@ header .page-ico{width:24px;height:24px;vertical-align:-5px}
 .fish-ico{width:22px;height:22px;vertical-align:-4px}
 .h3-ico{width:18px;height:18px;vertical-align:-3px;margin-right:2px}
 .pick-food img{width:24px;height:24px;flex-shrink:0}
+.pick-food .typemoji{font-size:22px;width:24px;text-align:center;flex-shrink:0}
 .food-group-title img{width:18px;height:18px;vertical-align:-3px;margin-right:4px}
+.food-group-title .typemoji{font-size:16px;margin-right:4px}
+.typemoji{display:inline-block;line-height:1}
 .timeline{padding:0 20px;display:flex;flex-direction:column;gap:10px}
 .meal-card{
   background:var(--card);border:2px solid var(--ink);border-radius:var(--hand2);
@@ -87,6 +90,7 @@ header .page-ico{width:24px;height:24px;vertical-align:-5px}
   box-shadow:2px 3px 0 rgba(107,74,86,.10);
 }
 .meal-emoji{width:30px;height:30px}
+.meal-card .typemoji{font-size:27px;width:30px;text-align:center}
 .meal-info{flex:1;min-width:0}
 .meal-name{font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .meal-sub{font-size:.75rem;color:var(--ink-soft);margin-top:2px}
@@ -509,8 +513,13 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 /* ═══════════════ 数据层 ═══════════════ */
 const LS_KEY = 'nekoKcal.v1';
 const SEED_VERSION = 2;   // 内置猫粮库版本，改动此号即触发旧库清空重灌
-const TYPE_ICON = {'罐头':'can','酱包':'pouch','冻干':'lollipop','猫条':'strip','猫粮':'bowl','干粮':'bowl','零食':'strip','其他':'fish'};
-const TICON = t => 'icons/'+(TYPE_ICON[t]||'paw')+'.png';
+const TYPE_ICON = {'罐头':'🧋','酱包':'🍉','冻干':'🍓','猫条':'🍡','猫粮':'🥯','干粮':'🥯','零食':'strip','其他':'🧀'};
+/* 类型图标渲染：emoji 直接出字符，否则出 icons/*.png 图片 */
+const TICON_HTML = (t,cls)=>{
+  const v = TYPE_ICON[t]; cls = cls||'';
+  if(v && v.charCodeAt(0)>255) return '<span class="typemoji '+cls+'">'+v+'</span>';
+  return '<img'+(cls?' class="'+cls+'"':'')+' src="icons/'+(v||'paw')+'.png" alt="">';
+};
 const TYPE_ORDER = ['罐头','酱包','冻干','猫条','猫粮','其他'];
 const DRY_TYPES = ['猫粮','干粮'];   // 按克计价（每100g kcal）的类型
 const COUNT_UNITS = ['只','个','颗','根','条'];   // 「其他」类按个数计的单位
@@ -739,10 +748,10 @@ function renderHome(){
   meals.forEach(m=>{
     const card = document.createElement('div'); card.className='meal-card';
     const food = m.foodId ? S.foods.find(f=>f.id===m.foodId) : null;
-    const icon = food ? TICON(food.type) : 'icons/paw.png';
+    const iconHtml = food ? TICON_HTML(food.type,'meal-emoji') : '<img class="meal-emoji" src="icons/paw.png" alt="">';
     const name = food ? food.name : (m.customName||'手动记录');
     const sub = fmtTime(m.timestamp) + (m.count? ' · '+m.count+((food&&food.unit)||'只') : (m.percent? ' · 吃了'+m.percent+'%' : (m.grams? ' · '+m.grams+'g' : '')));
-    card.innerHTML = '<img class="meal-emoji" src="'+icon+'" alt="">'
+    card.innerHTML = iconHtml
       +'<div class="meal-info"><div class="meal-name"></div><div class="meal-sub">'+sub+'</div></div>'
       +'<span class="meal-kcal">'+Math.round(m.kcal)+' kcal</span>'
       +'<button class="meal-del">✕</button>';
@@ -818,7 +827,7 @@ function renderPickList(q, showAll){
     const b = document.createElement('button');
     b.className = 'pick-food' + (i<3 && !q ? ' hot':'');
     const kcalTxt = f.kcalPerPack!=null ? f.kcalPerPack+' kcal/'+((f.countMode&&f.unit)?f.unit:'包') : f.kcalPer100g+' kcal/100g';
-    b.innerHTML = '<img src="'+TICON(f.type)+'" alt=""><span class="fn"></span><span class="pf-k">'+kcalTxt+'</span>';
+    b.innerHTML = TICON_HTML(f.type)+'<span class="fn"></span><span class="pf-k">'+kcalTxt+'</span>';
     b.querySelector('.fn').textContent = f.name;
     b.onclick = ()=>{ pickedFood = f; openAmount(); };
     box.appendChild(b);
@@ -1027,7 +1036,7 @@ function renderFoods(){
     any = true;
     list.sort((a,b)=>b.useCount-a.useCount);
     const h = document.createElement('div'); h.className='food-group-title';
-    h.innerHTML = '<img src="'+TICON(t)+'" alt="">'+t; box.appendChild(h);
+    h.innerHTML = TICON_HTML(t)+t; box.appendChild(h);
     list.forEach(f=>{
       const it = document.createElement('div'); it.className='food-item';
       const kcalTxt = f.kcalPerPack!=null ? f.kcalPerPack+' kcal/'+((f.countMode&&f.unit)?f.unit:'包') : f.kcalPer100g+' kcal/100g';
