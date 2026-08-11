@@ -404,7 +404,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v35</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v40</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -1383,6 +1383,11 @@ if('serviceWorker' in navigator && location.protocol!=='file:'){
   // 每次启动主动检查 SW 更新
   navigator.serviceWorker.getRegistration().then(r=>{ if(r) r.update(); }).catch(()=>{});
 }
+/* 版本号唯一事实来源 = sw.js 的 CACHE 名（neko-kcal-vN），页面启动时实时同步，防止两处维护漂移 */
+fetch('sw.js', {cache:'no-store'}).then(r=>r.text()).then(t=>{
+  const m = t.match(/neko-kcal-(v\d+)/);
+  if(m && $('ver-tag')) $('ver-tag').textContent = m[1];
+}).catch(()=>{});
 $('btn-update').onclick = ()=>{
   toast('检查更新中…');
   if('serviceWorker' in navigator){
