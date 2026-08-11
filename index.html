@@ -381,7 +381,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
       <h3><img class="h3-ico" src="icons/scale.png" alt=""> 体重记录</h3>
       <div class="row2">
         <div class="field"><label>体重 (kg)</label><input id="w-input" type="number" inputmode="decimal" step="0.1" placeholder="如 4.2"></div>
-        <div class="field"><label>日期（默认今天，点我修改）</label><button class="time-btn" id="w-date-btn">今天 🐾</button></div>
+        <div class="field"><label>日期</label><button class="time-btn" id="w-date-btn">今天 🐾</button></div>
       </div>
       <button class="btn btn-primary btn-block" id="btn-add-weight">记一笔体重 ⚖️</button>
       <div id="w-chart" style="margin-top:14px"></div>
@@ -400,7 +400,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v34</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v35</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -686,6 +686,7 @@ function switchTab(tab){
   $('tab-label-home').textContent = rec ? '记一餐' : '今日';
   Object.values(PAGES).forEach(p=>$(p).classList.add('hidden'));
   $(PAGES[tab]).classList.remove('hidden');
+  window.scrollTo(0,0);   // 切页回顶，避免停在之前的滚动位置
   if(tab==='foods') renderFoods();
   if(tab==='me') renderMe();
   if(tab==='home') renderHome();
