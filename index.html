@@ -294,6 +294,13 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
           <span class="slider-val" id="pct-val">100%</span>
         </div>
       </div>
+      <div id="weigh-zone" class="hidden">
+        <div class="sub-title" style="margin:10px 0 8px">── 或称个重 ⚖️ ──</div>
+        <div class="field"><label id="w-remain-label">新开一包 → 还剩 (g)</label><input id="w-remain" type="number" inputmode="decimal" placeholder="如 50"></div>
+        <div class="field"><label>吃剩饭 → 吃前 / 吃后 (g)</label>
+          <div class="row2"><input id="w-before" type="number" inputmode="decimal" placeholder="吃前"><input id="w-after" type="number" inputmode="decimal" placeholder="吃后"></div>
+        </div>
+      </div>
       <div id="grams-zone" class="hidden">
         <div class="field"><label>吃了多少克 (g)</label><input id="grams-input" type="number" inputmode="decimal" placeholder="如 40"></div>
       </div>
@@ -384,7 +391,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v28</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v29</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -428,6 +435,10 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   <div class="row2">
     <div class="field" id="ff-pack-field"><label id="ff-pack-label">每包/每罐热量 (kcal)</label><input id="ff-pack" type="number" inputmode="decimal" placeholder="如 85"></div>
     <div class="field hidden" id="ff-100g-field"><label>每 100g 热量 (kcal)</label><input id="ff-100g" type="number" inputmode="decimal" placeholder="如 380"></div>
+  </div>
+  <div class="row2" id="ff-weight-row">
+    <div class="field"><label>净重 (g)</label><input id="ff-net" type="number" inputmode="decimal" placeholder="如 85"></div>
+    <div class="field"><label>带包装重 (g)</label><input id="ff-gross" type="number" inputmode="decimal" placeholder="如 94"></div>
   </div>
   <div class="field"><label>规格备注（选填）</label><input id="ff-spec" placeholder="如 85g/包"></div>
   <button class="btn btn-primary btn-block" id="btn-save-food">保存 💾</button>
@@ -494,6 +505,25 @@ const TYPE_ORDER = ['罐头','酱包','冻干','猫条','猫粮','其他'];
 const DRY_TYPES = ['猫粮','干粮'];   // 按克计价（每100g kcal）的类型
 const COUNT_UNITS = ['只','个','颗','根','条'];   // 「其他」类按个数计的单位
 
+/* 包装皮重（g）：毛重 = 净重 + 皮重（用户提供实测值） */
+const PACK_TARE = {
+  '格吾安奶昔':9,'尾巴生活紫泥':9,'尾巴生活彩虹泥酱包':9,'益嘉禾暮':9,'喵梵思':9,'虎衍':9,
+  '二人一物真果粒':9,'二人一物麦卢卡':9,'相生之宠绵绵酱':9,'麻姆大酱包':9,'毛兀果蔬鸡':9,
+  '二人一物汤包':9,'食物链m90':9,
+  '短脖子乔治乳鸽味':20,'喵招':20,'格吾安四季罐·莓果鸡肉/芦笋鸭肉/山药鸡/冬笋牛约':20,
+  '格吾安四季罐·石榴鸡/秋月梨鸭/芭乐鸭/山竹鸡':20,'猫爸爸厨房':20,
+  '麻姆mini包':4,'布兰德酱包':4,
+  '毛兀罐罐':15,
+  '尾巴生活彩虹杯':6,'二人一物熔岩罐':6,
+};
+/* 给食物补 netGrams（从规格解析）和 grossGrams（净重+皮重） */
+function fillWeights(f){
+  if(f.netGrams==null){ const m=(f.spec||'').match(/(\d+(?:\.\d+)?)\s*g/); if(m) f.netGrams=parseFloat(m[1]); }
+  const tare = PACK_TARE[f.name];
+  if(tare!=null && f.netGrams!=null) f.grossGrams = f.netGrams + tare;
+  return f;
+}
+
 /* 历史体重（截图提取，单位：斤；灌入时 ×0.5 换算 kg，按日期去重） */
 const WEIGHT_SEED_JIN = [
   ['2025-06-02',7.76],['2025-06-06',7.92],['2025-06-13',8.04],['2025-06-20',7.9],
@@ -550,7 +580,7 @@ function defaultFoods(){
     F('鲜朗','猫粮',531.7,'',true),
     // ── 其他类 ──
     F('虾仁','其他',10,'1只'),
-  ].map(f=>f.name==='虾仁' ? Object.assign(f,{countMode:true, unit:'只'}) : f);
+  ].map(f=>f.name==='虾仁' ? Object.assign(f,{countMode:true, unit:'只'}) : f).map(fillWeights);
 }
 
 function defaultState(){
@@ -590,6 +620,12 @@ function load(){
     });
     if(!st.profile.weightKg) st.profile.weightKg = Math.round(WEIGHT_SEED_JIN[WEIGHT_SEED_JIN.length-1][1]*50)/100;
     st._weightsSeeded = true;
+    localStorage.setItem(LS_KEY, JSON.stringify(st));
+  }
+  // 一次性迁移：补净重/毛重（称重法用）
+  if(!st._grossSeeded){
+    st.foods.forEach(fillWeights);
+    st._grossSeeded = true;
     localStorage.setItem(LS_KEY, JSON.stringify(st));
   }
   return st;
@@ -798,6 +834,11 @@ function openAmount(prefill){
     const u = pickedFood.unit||'只';
     document.querySelectorAll('.big-pct[data-cnt]').forEach(b=>{ b.textContent = b.dataset.cnt+' '+u; });
   }
+  $('weigh-zone').classList.toggle('hidden', !isPack || isCount);
+  if(isPack && !isCount){
+    $('w-remain').value=''; $('w-before').value=''; $('w-after').value='';
+    $('w-remain-label').textContent = '新开一包 → 还剩 (g)' + (pickedFood.grossGrams!=null ? '（整袋 '+pickedFood.grossGrams+'g）' : '（未录毛重，先去猫粮库补）');
+  }
   if(prefill){   // 编辑模式：预填原值
     mealTimeVal = prefill.timestamp;
     $('meal-time-btn').textContent = fmtTimeBtn(prefill.timestamp);
@@ -830,8 +871,20 @@ function updatePreview(){
     kcal = pickedFood.kcalPerPack * curCnt;
     formula = pickedFood.kcalPerPack+' kcal × '+curCnt+((pickedFood.unit)||'只');
   }else if(pickedFood.kcalPerPack != null){
-    kcal = pickedFood.kcalPerPack * curPct/100;
-    formula = pickedFood.kcalPerPack+' kcal × '+curPct+'%';
+    const w = detectWeigh();
+    if(w){
+      const net = pickedFood.netGrams;
+      if(w.eaten<=0){ formula = '⚠️ 数值不对（吃后≥吃前）'; }
+      else if(!net){ formula = '⚠️ 缺净重数据，去猫粮库补'; }
+      else{
+        const pct = w.eaten/net*100;
+        kcal = pickedFood.kcalPerPack * pct/100;
+        formula = (w.mode==='newpack'?'新开一包':'剩饭')+'：'+Math.round(w.eaten*10)/10+'g ≈ '+Math.round(pct*10)/10+'%';
+      }
+    }else{
+      kcal = pickedFood.kcalPerPack * curPct/100;
+      formula = pickedFood.kcalPerPack+' kcal × '+curPct+'%';
+    }
   }else{
     const g = parseFloat($('grams-input').value)||0;
     kcal = pickedFood.kcalPer100g * g/100;
@@ -840,12 +893,20 @@ function updatePreview(){
   $('preview-kcal').textContent = Math.round(kcal*10)/10;
   $('preview-formula').textContent = formula;
 }
+/* 称重法：填了吃前+吃后 → 剩饭模式；只填剩余 → 新开一包模式；都没填 → 按比例 */
+function detectWeigh(){
+  const before = parseFloat($('w-before').value), after = parseFloat($('w-after').value), remain = parseFloat($('w-remain').value);
+  if(!isNaN(before) && !isNaN(after)) return {mode:'leftover', eaten:before-after};
+  if(!isNaN(remain) && pickedFood.grossGrams!=null) return {mode:'newpack', eaten:pickedFood.grossGrams-remain};
+  return null;
+}
 
 document.querySelectorAll('.big-pct[data-pct]').forEach(b=>{ b.onclick = ()=>{ $('pct-slider').value=b.dataset.pct; setPct(+b.dataset.pct); }; });
 document.querySelectorAll('.big-pct[data-cnt]').forEach(b=>{ b.onclick = ()=>{ $('cnt-slider').value=b.dataset.cnt; setCnt(+b.dataset.cnt); }; });
 $('cnt-slider').oninput = e=>setCnt(+e.target.value);
 $('pct-slider').oninput = e=>setPct(+e.target.value);
 $('grams-input').oninput = updatePreview;
+['w-remain','w-before','w-after'].forEach(id=>{ $(id).oninput = updatePreview; });
 
 $('btn-add').onclick = ()=>{
   pickedFood=null; editingMealId=null;
@@ -872,8 +933,20 @@ $('btn-save-meal').onclick = ()=>{
     meal.count = curCnt;
     kcal = pickedFood.kcalPerPack * curCnt;
   }else if(pickedFood.kcalPerPack != null){
-    meal.percent = curPct;
-    kcal = pickedFood.kcalPerPack * curPct/100;
+    const w = detectWeigh();
+    if(w){
+      if(w.eaten<=0){ toast('称重的数不对，检查一下'); return; }
+      const net = pickedFood.netGrams;
+      if(!net){ toast('这个食物缺净重，去猫粮库补一下'); return; }
+      const pct = w.eaten/net*100;
+      if(pct>105){ toast('超出整包净重了，是不是称错了'); return; }
+      meal.percent = Math.round(pct*10)/10;
+      meal.wmode = w.mode;
+      kcal = pickedFood.kcalPerPack * pct/100;
+    }else{
+      meal.percent = curPct;
+      kcal = pickedFood.kcalPerPack * curPct/100;
+    }
   }else{
     const g = parseFloat($('grams-input').value)||0;
     if(g<=0){ toast('填一下克数哦'); return; }
@@ -965,6 +1038,8 @@ function openFoodForm(f){
   $('ff-pack').value = f&&f.kcalPerPack!=null?f.kcalPerPack:'';
   $('ff-100g').value = f&&f.kcalPer100g!=null?f.kcalPer100g:'';
   $('ff-spec').value = f?(f.spec||''):'';
+  $('ff-net').value = f&&f.netGrams!=null?f.netGrams:'';
+  $('ff-gross').value = f&&f.grossGrams!=null?f.grossGrams:'';
   $('ff-unit').value = f ? (f.unit || (f.countMode ? '只' : (f.kcalPer100g!=null ? '克' : '包'))) : '只';
   toggleKcalField();
   openSheet('sheet-food');
@@ -978,6 +1053,7 @@ function toggleKcalField(){
   const isDry = isGramsMode();
   $('ff-pack-field').classList.toggle('hidden', isDry);
   $('ff-100g-field').classList.toggle('hidden', !isDry);
+  $('ff-weight-row').classList.toggle('hidden', isDry);
   $('ff-unit-field').classList.toggle('hidden', t!=='其他');
   updatePackLabel();
 }
@@ -1007,6 +1083,8 @@ $('btn-save-food').onclick = ()=>{
   }else{
     data.countMode = false;
   }
+  data.netGrams = parseFloat($('ff-net').value)||null;
+  data.grossGrams = parseFloat($('ff-gross').value)||null;
   if(data.kcalPerPack==null && data.kcalPer100g==null){ toast('填一下热量哦'); return; }
   if(editingFoodId){
     const f = S.foods.find(x=>x.id===editingFoodId);
