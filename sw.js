@@ -1,5 +1,5 @@
-const CACHE = 'neko-kcal-v36';
-const ASSETS = ['./index.html', './manifest.json', './icon-180.png', './icon-512.png', './avatar.png', './tab-home.png', './tab-foods.png', './icons/cat.png', './icons/fish.png', './icons/can.png', './icons/bowl.png', './icons/paw.png', './icons/ribbon.png', './icons/lollipop.png', './icons/pouch.png', './icons/strip.png', './icons/scale.png', './icons/calendar.png', './'];
+const CACHE = 'neko-kcal-v37';
+const ASSETS = ['./index.html', './manifest.json', './icon-180.png', './icon-512.png', './avatar.png', './fish.png', './tab-home.png', './tab-foods.png', './icons/cat.png', './icons/fish.png', './icons/can.png', './icons/bowl.png', './icons/paw.png', './icons/ribbon.png', './icons/lollipop.png', './icons/pouch.png', './icons/strip.png', './icons/scale.png', './icons/calendar.png', './'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
