@@ -183,6 +183,12 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   padding:12px;border:2px dashed var(--pink);border-radius:var(--hand);
 }
 .kcal-preview small{display:block;font-size:.72rem;color:var(--ink-soft);font-weight:400;margin-top:3px}
+.num-font{font-family:"Chalkboard SE","Marker Felt",-apple-system,sans-serif}
+.bowl-wrap{display:flex;align-items:flex-end;justify-content:center;gap:16px;margin:2px 0 4px}
+.bignum{text-align:center;padding-bottom:10px}
+.bignum .pct{font-size:2.4rem;font-weight:800;color:var(--pink-deep);line-height:1}
+.bignum .kc{font-size:.78rem;color:var(--ink-soft);margin-top:4px}
+.bignum .kc b{color:var(--ink);font-size:1rem}
 .pick-food{
   display:flex;align-items:center;gap:10px;width:100%;text-align:left;
   padding:12px 14px;border:2px solid var(--ink);border-radius:var(--hand2);
@@ -281,7 +287,34 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
     </div>
     <div id="step-amount" class="hidden">
       <h2 id="amount-title" style="text-align:center;font-size:1.05rem;margin-bottom:4px"></h2>
-      <div class="sub-title">吃了多少呀？</div>
+      <div class="sub-title">点一点或拉一拉，猫碗帮你装满 🥣</div>
+      <div id="bowl-hero" class="bowl-wrap hidden">
+        <svg width="140" height="112" viewBox="0 0 150 120">
+          <defs><clipPath id="bowlIn"><path d="M25 44 L125 44 L114 100 Q112 108 102 108 L48 108 Q38 108 36 100 Z"/></clipPath></defs>
+          <g clip-path="url(#bowlIn)">
+            <g id="bowl-fill-g" style="transition:transform .5s cubic-bezier(.34,1.3,.64,1)">
+              <rect x="18" y="40" width="114" height="70" fill="#F4A7BE"/>
+              <path d="M18 46 Q33 40 48 46 T78 46 T108 46 T138 46 L138 40 L18 40 Z" fill="#F7B8CA"/>
+              <circle cx="50" cy="60" r="4" fill="#E87E9F"/><circle cx="75" cy="72" r="4" fill="#E87E9F"/><circle cx="98" cy="58" r="4" fill="#E87E9F"/><circle cx="62" cy="88" r="4" fill="#E87E9F"/><circle cx="88" cy="90" r="4" fill="#E87E9F"/>
+            </g>
+          </g>
+          <path d="M25 44 L125 44 L114 100 Q112 108 102 108 L48 108 Q38 108 36 100 Z" fill="none" stroke="#6B4A56" stroke-width="2.6" stroke-linejoin="round"/>
+          <path d="M20 44 Q20 40 26 40 L124 40 Q130 40 130 44" fill="none" stroke="#6B4A56" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M38 40 L32 22 L52 32" fill="#FDF0F4" stroke="#6B4A56" stroke-width="2.4" stroke-linejoin="round"/>
+          <path d="M112 40 L118 22 L98 32" fill="#FDF0F4" stroke="#6B4A56" stroke-width="2.4" stroke-linejoin="round"/>
+          <path d="M60 82 Q64 78 68 82" fill="none" stroke="#6B4A56" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M82 82 Q86 78 90 82" fill="none" stroke="#6B4A56" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M72 88 L78 88 L75 92 Z" fill="#E87E9F"/>
+          <path d="M75 92 Q72 95 69 93.5" fill="none" stroke="#6B4A56" stroke-width="2" stroke-linecap="round"/>
+          <path d="M75 92 Q78 95 81 93.5" fill="none" stroke="#6B4A56" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="56" cy="90" r="3" fill="#F4A7BE" opacity=".7"/>
+          <circle cx="94" cy="90" r="3" fill="#F4A7BE" opacity=".7"/>
+        </svg>
+        <div class="bignum">
+          <div class="pct num-font" id="bowl-pct">100%</div>
+          <div class="kc">≈ <b id="bowl-kcal">0</b> kcal</div>
+        </div>
+      </div>
       <div id="pct-zone">
         <div class="pct-col">
           <button class="big-pct on" data-pct="100">100%</button>
@@ -315,7 +348,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
           <span class="slider-val" id="cnt-val">1只</span>
         </div>
       </div>
-      <div class="kcal-preview"><span id="preview-kcal">0</span> kcal<small id="preview-formula"></small></div>
+      <div id="kcal-preview-zone" class="kcal-preview"><span id="preview-kcal">0</span> kcal<small id="preview-formula"></small></div>
       <div class="field"><label>时间（默认现在，点我修改）</label><button class="time-btn" id="meal-time-btn">现在 🐾</button></div>
       <button class="btn btn-primary btn-block" id="btn-save-meal">记下啦 ✅</button>
       <button class="btn btn-ghost btn-block" id="back-pick" style="margin-top:8px">‹ 重选食物</button>
@@ -391,7 +424,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v29</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v30</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -835,6 +868,8 @@ function openAmount(prefill){
     document.querySelectorAll('.big-pct[data-cnt]').forEach(b=>{ b.textContent = b.dataset.cnt+' '+u; });
   }
   $('weigh-zone').classList.toggle('hidden', !isPack || isCount);
+  $('bowl-hero').classList.toggle('hidden', !isPack || isCount);
+  $('kcal-preview-zone').classList.toggle('hidden', isPack && !isCount);
   if(isPack && !isCount){
     $('w-remain').value=''; $('w-before').value=''; $('w-after').value='';
     $('w-remain-label').textContent = '新开一包 → 还剩 (g)' + (pickedFood.grossGrams!=null ? '（整袋 '+pickedFood.grossGrams+'g）' : '（未录毛重，先去猫粮库补）');
@@ -866,7 +901,7 @@ function setCnt(c){
   updatePreview();
 }
 function updatePreview(){
-  let kcal = 0, formula = '';
+  let kcal = 0, formula = '', bowlPct = null;
   if(pickedFood.countMode){
     kcal = pickedFood.kcalPerPack * curCnt;
     formula = pickedFood.kcalPerPack+' kcal × '+curCnt+((pickedFood.unit)||'只');
@@ -879,10 +914,12 @@ function updatePreview(){
       else{
         const pct = w.eaten/net*100;
         kcal = pickedFood.kcalPerPack * pct/100;
+        bowlPct = Math.min(pct,100);
         formula = (w.mode==='newpack'?'新开一包':'剩饭')+'：'+Math.round(w.eaten*10)/10+'g ≈ '+Math.round(pct*10)/10+'%';
       }
     }else{
       kcal = pickedFood.kcalPerPack * curPct/100;
+      bowlPct = curPct;
       formula = pickedFood.kcalPerPack+' kcal × '+curPct+'%';
     }
   }else{
@@ -892,6 +929,14 @@ function updatePreview(){
   }
   $('preview-kcal').textContent = Math.round(kcal*10)/10;
   $('preview-formula').textContent = formula;
+  if(bowlPct!=null) updateBowl(bowlPct, kcal);
+}
+/* 猫碗装粮动画 + 大数字 */
+function updateBowl(pct, kcal){
+  $('bowl-pct').textContent = Math.round(pct)+'%';
+  $('bowl-kcal').textContent = Math.round(kcal*10)/10;
+  const shift = (1-Math.min(Math.max(pct,0),100)/100)*64;
+  $('bowl-fill-g').style.transform = 'translateY('+shift+'px)';
 }
 /* 称重法：填了吃前+吃后 → 剩饭模式；只填剩余 → 新开一包模式；都没填 → 按比例 */
 function detectWeigh(){
