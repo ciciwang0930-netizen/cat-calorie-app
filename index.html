@@ -280,6 +280,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
     <div id="step-pick">
       <input class="sheet-search" id="pick-search" placeholder="🔍 搜索猫粮库…">
       <div id="pick-list"></div>
+      <button class="btn btn-block" id="btn-food-add-pick" style="margin-top:6px">＋ 新增猫粮入库</button>
       <button class="btn btn-ghost btn-block" id="btn-custom" style="margin-top:6px">✏️ 不在库里？手动记一笔</button>
       <button class="btn btn-ghost btn-block" id="back-home-1" style="margin-top:8px">‹ 返回首页</button>
     </div>
@@ -399,7 +400,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v33</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v34</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -938,6 +939,7 @@ $('pick-search').oninput = e=>renderPickList(e.target.value.trim());
 $('back-pick').onclick = ()=>goStep('step-pick');
 $('back-pick2').onclick = ()=>goStep('step-pick');
 $('back-home-1').onclick = ()=>switchTab('home');
+$('btn-food-add-pick').onclick = ()=>{ recordReturn='pick'; openFoodForm(null); };
 $('btn-custom').onclick = ()=>{ goStep('step-custom'); customTimeVal = Date.now(); $('custom-time-btn').textContent = '现在 🐾'; };
 
 $('btn-save-meal').onclick = ()=>{
