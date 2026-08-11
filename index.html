@@ -396,7 +396,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v31</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v32</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -454,10 +454,10 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   <div class="sheet-handle"></div>
   <h2>批量录入 📋</h2>
   <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8;margin-bottom:10px">
-    每行一条，格式：<b>名称, 类型, 热量</b><br>
+    每行一条，格式：<b>名称, 类型, 热量, 净重g, 带包装重g</b>（后两个可省）<br>
     罐头/酱包/冻干/猫条 → 填<b>每包 kcal</b>；猫粮填<b>每100g kcal</b>（类型写 猫粮）
   </p>
-  <div class="field"><textarea id="batch-text" rows="7" placeholder="顽皮鲜封包鸡肉味, 酱包, 85&#10;皇家室内成猫粮, 干粮, 380&#10;小李子罐头牛肉, 罐头, 120"></textarea></div>
+  <div class="field"><textarea id="batch-text" rows="7" placeholder="顽皮鲜封包鸡肉味, 酱包, 85, 85, 94&#10;皇家室内成猫粮, 猫粮, 380&#10;小李子罐头牛肉, 罐头, 120, 170, 190"></textarea></div>
   <div class="batch-err" id="batch-err"></div>
   <div class="batch-preview" id="batch-preview"></div>
   <button class="btn btn-primary btn-block" id="btn-do-batch" style="margin-top:12px">解析并入库 🚀</button>
@@ -1119,18 +1119,22 @@ $('btn-save-food').onclick = ()=>{
   }
 };
 
-/* 批量录入 */
+/* 批量录入：名称, 类型, 热量[, 净重g, 带包装重g] */
 function parseBatch(text){
   const ok=[], bad=[];
   text.split('\n').map(l=>l.trim()).filter(Boolean).forEach((l,i)=>{
     const parts = l.split(/[,，]/).map(s=>s.trim());
-    if(parts.length<3){ bad.push((i+1)+' 行：'+l+'（要 3 段）'); return; }
-    const [name, typeRaw, kcalRaw] = parts;
+    if(parts.length<3){ bad.push((i+1)+' 行：'+l+'（至少 3 段）'); return; }
+    const [name, typeRaw, kcalRaw, netRaw, grossRaw] = parts;
     const kcal = parseFloat(kcalRaw);
     if(!name || !isFinite(kcal) || kcal<=0){ bad.push((i+1)+' 行：'+l+'（热量不对）'); return; }
     const isDry = typeRaw.includes('干粮') || typeRaw.includes('猫粮');
     const type = isDry ? '猫粮' : (['罐头','酱包','冻干','猫条','零食','其他'].find(t=>typeRaw.includes(t)) || '其他');
-    ok.push({id:uid(), name, type, kcalPerPack:isDry?null:kcal, kcalPer100g:isDry?kcal:null, spec:'', useCount:0});
+    const f = {id:uid(), name, type, kcalPerPack:isDry?null:kcal, kcalPer100g:isDry?kcal:null, spec:'', useCount:0};
+    const net = parseFloat(netRaw), gross = parseFloat(grossRaw);
+    if(isFinite(net) && net>0) f.netGrams = net;
+    if(isFinite(gross) && gross>0) f.grossGrams = gross;
+    ok.push(f);
   });
   return {ok, bad};
 }
