@@ -1046,7 +1046,7 @@ function renderFoods(){
         +'<div class="fa"><button class="fe">✏️</button><button class="fd">🗑</button></div>';
       it.querySelector('.fn').textContent = f.name;
       it.querySelector('.type-pill').textContent = f.type;
-      it.querySelector('.fe').onclick = ()=>openFoodForm(f);
+      it.querySelector('.fe').onclick = ()=>{ recordReturn='foods'; openFoodForm(f); };
       it.querySelector('.fd').onclick = ()=>{
         if(confirm('从猫粮库删除「'+f.name+'」？历史记录会保留。')){
           S.foods = S.foods.filter(x=>x.id!==f.id); save(); renderFoods(); toast('已删除');
@@ -1094,7 +1094,7 @@ function updatePackLabel(){
 }
 $('ff-type').onchange = toggleKcalField;
 $('ff-unit').onchange = toggleKcalField;
-$('btn-food-add').onclick = ()=>{ recordReturn = $('page-record').classList.contains('hidden') ? 'home' : 'pick'; openFoodForm(null); };
+$('btn-food-add').onclick = ()=>{ recordReturn = $('page-record').classList.contains('hidden') ? 'foods' : 'pick'; openFoodForm(null); };
 $('btn-food-batch').onclick = ()=>{ $('batch-err').textContent=''; $('batch-preview').innerHTML=''; openSheet('sheet-batch'); };
 
 $('btn-save-food').onclick = ()=>{
@@ -1130,6 +1130,7 @@ $('btn-save-food').onclick = ()=>{
   }else{
     renderFoods();
     if(recordReturn==='pick'){ renderPickList(''); switchTab('record'); }
+    else if(recordReturn==='foods'){ switchTab('foods'); }
     else switchTab('home');
     toast('保存成功 🍖');
   }
