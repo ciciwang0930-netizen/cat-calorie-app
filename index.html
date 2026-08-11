@@ -689,7 +689,7 @@ function switchTab(tab){
     const t = x.dataset.tab;
     x.classList.toggle('on', rec ? t==='home' : t===tab);
     const img = x.querySelector('img.tico');
-    if(img) img.src = rec && t==='home' ? 'tab-foods.png' : TAB_ICONS[t];
+    if(img){ const target = (rec && t==='home') ? 'tab-foods.png' : TAB_ICONS[t]; if(target) img.src = target; }
     if(rec && t==='home') img.style.filter='none', img.style.opacity='1';
   });
   $('tab-label-home').textContent = rec ? '记一餐' : '今日';
