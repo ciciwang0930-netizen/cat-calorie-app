@@ -76,14 +76,17 @@ header .page-ico{width:24px;height:24px;vertical-align:-5px}
   margin:22px 20px 10px;font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:8px;
 }
 .section-title::after{content:"";flex:1;border-top:2px dashed var(--pink)}
-.fish-ico{font-size:19px}
+.fish-ico{width:22px;height:22px;vertical-align:-4px}
+.h3-ico{width:18px;height:18px;vertical-align:-3px;margin-right:2px}
+.pick-food img{width:24px;height:24px;flex-shrink:0}
+.food-group-title img{width:18px;height:18px;vertical-align:-3px;margin-right:4px}
 .timeline{padding:0 20px;display:flex;flex-direction:column;gap:10px}
 .meal-card{
   background:var(--card);border:2px solid var(--ink);border-radius:var(--hand2);
   padding:12px 16px;display:flex;align-items:center;gap:12px;
   box-shadow:2px 3px 0 rgba(107,74,86,.10);
 }
-.meal-emoji{font-size:1.5rem}
+.meal-emoji{width:30px;height:30px}
 .meal-info{flex:1;min-width:0}
 .meal-name{font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .meal-sub{font-size:.75rem;color:var(--ink-soft);margin-top:2px}
@@ -263,11 +266,11 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
     </div>
   </div>
 
-  <div class="section-title">今日进食 <span class="fish-ico">🐈</span></div>
+  <div class="section-title">今日进食 <img class="fish-ico" src="icons/cat.png" alt=""></div>
   <div class="timeline" id="timeline"></div>
   <div class="empty-tip hidden" id="empty-tip">今天还没有记录哦<br>点下面的小按钮记一餐吧 🐾</div>
 
-  <button class="add-btn" id="btn-add">记一餐 🐾</button>
+  <button class="add-btn" id="btn-add">记一餐 <img src="icons/paw.png" style="width:20px;height:20px;vertical-align:-4px" alt=""></button>
 </div>
 
 <!-- ═══════════ 记一餐（页内流程） ═══════════ -->
@@ -369,12 +372,12 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
     </div>
 
     <div class="card">
-      <h3>本周概览 📊</h3>
+      <h3><img class="h3-ico" src="icons/calendar.png" alt=""> 本周概览</h3>
       <div id="week-stats" style="font-size:.85rem;line-height:2"></div>
     </div>
 
     <div class="card">
-      <h3>体重记录 ⚖️</h3>
+      <h3><img class="h3-ico" src="icons/scale.png" alt=""> 体重记录</h3>
       <div class="row2">
         <div class="field"><label>体重 (kg)</label><input id="w-input" type="number" inputmode="decimal" step="0.1" placeholder="如 4.2"></div>
         <div class="field"><label>日期（默认今天，点我修改）</label><button class="time-btn" id="w-date-btn">今天 🐾</button></div>
@@ -396,7 +399,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v32</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v33</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
     </div>
   </div>
@@ -406,7 +409,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 <nav>
   <button data-tab="home" class="on"><img class="tico" src="tab-home.png" alt=""><span id="tab-label-home">今日</span></button>
   <button data-tab="foods"><img class="tico" src="tab-foods.png" alt="">猫粮库</button>
-  <button data-tab="me"><span class="ico">🎀</span>我的</button>
+  <button data-tab="me"><img class="tico" src="icons/ribbon.png" alt="">我的</button>
 </nav>
 
 <!-- ═══════════ 记一餐 Sheet ═══════════ -->
@@ -505,7 +508,8 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 /* ═══════════════ 数据层 ═══════════════ */
 const LS_KEY = 'nekoKcal.v1';
 const SEED_VERSION = 2;   // 内置猫粮库版本，改动此号即触发旧库清空重灌
-const TYPE_EMOJI = {'罐头':'🥫','酱包':'🥣','冻干':'🍗','猫条':'🍡','猫粮':'🍘','干粮':'🍘','零食':'🍬','其他':'🍽️'};
+const TYPE_ICON = {'罐头':'can','酱包':'pouch','冻干':'lollipop','猫条':'strip','猫粮':'bowl','干粮':'bowl','零食':'strip','其他':'fish'};
+const TICON = t => 'icons/'+(TYPE_ICON[t]||'paw')+'.png';
 const TYPE_ORDER = ['罐头','酱包','冻干','猫条','猫粮','其他'];
 const DRY_TYPES = ['猫粮','干粮'];   // 按克计价（每100g kcal）的类型
 const COUNT_UNITS = ['只','个','颗','根','条'];   // 「其他」类按个数计的单位
@@ -733,10 +737,10 @@ function renderHome(){
   meals.forEach(m=>{
     const card = document.createElement('div'); card.className='meal-card';
     const food = m.foodId ? S.foods.find(f=>f.id===m.foodId) : null;
-    const emoji = food ? (TYPE_EMOJI[food.type]||'🍽️') : '✏️';
+    const icon = food ? TICON(food.type) : 'icons/paw.png';
     const name = food ? food.name : (m.customName||'手动记录');
     const sub = fmtTime(m.timestamp) + (m.count? ' · '+m.count+((food&&food.unit)||'只') : (m.percent? ' · 吃了'+m.percent+'%' : (m.grams? ' · '+m.grams+'g' : '')));
-    card.innerHTML = '<span class="meal-emoji">'+emoji+'</span>'
+    card.innerHTML = '<img class="meal-emoji" src="'+icon+'" alt="">'
       +'<div class="meal-info"><div class="meal-name"></div><div class="meal-sub">'+sub+'</div></div>'
       +'<span class="meal-kcal">'+Math.round(m.kcal)+' kcal</span>'
       +'<button class="meal-del">✕</button>';
@@ -812,7 +816,7 @@ function renderPickList(q, showAll){
     const b = document.createElement('button');
     b.className = 'pick-food' + (i<3 && !q ? ' hot':'');
     const kcalTxt = f.kcalPerPack!=null ? f.kcalPerPack+' kcal/'+((f.countMode&&f.unit)?f.unit:'包') : f.kcalPer100g+' kcal/100g';
-    b.innerHTML = '<span>'+(TYPE_EMOJI[f.type]||'🍽️')+'</span><span class="fn"></span><span class="pf-k">'+kcalTxt+'</span>';
+    b.innerHTML = '<img src="'+TICON(f.type)+'" alt=""><span class="fn"></span><span class="pf-k">'+kcalTxt+'</span>';
     b.querySelector('.fn').textContent = f.name;
     b.onclick = ()=>{ pickedFood = f; openAmount(); };
     box.appendChild(b);
@@ -1020,7 +1024,7 @@ function renderFoods(){
     any = true;
     list.sort((a,b)=>b.useCount-a.useCount);
     const h = document.createElement('div'); h.className='food-group-title';
-    h.textContent = (TYPE_EMOJI[t]||'🍽️')+' '+t; box.appendChild(h);
+    h.innerHTML = '<img src="'+TICON(t)+'" alt="">'+t; box.appendChild(h);
     list.forEach(f=>{
       const it = document.createElement('div'); it.className='food-item';
       const kcalTxt = f.kcalPerPack!=null ? f.kcalPerPack+' kcal/'+((f.countMode&&f.unit)?f.unit:'包') : f.kcalPer100g+' kcal/100g';
