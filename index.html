@@ -1130,7 +1130,7 @@ $('btn-save-food').onclick = ()=>{
   }else{
     renderFoods();
     if(recordReturn==='pick'){ renderPickList(''); switchTab('record'); }
-    else if(recordReturn==='foods'){ switchTab('foods'); }
+    else if(recordReturn==='foods'){ $('food-search').value=''; switchTab('foods'); }
     else switchTab('home');
     toast('保存成功 🍖');
   }
