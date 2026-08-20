@@ -190,6 +190,15 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   padding:12px;border:2px dashed var(--pink);border-radius:var(--hand);
 }
 .kcal-preview small{display:block;font-size:.72rem;color:var(--ink-soft);font-weight:400;margin-top:3px}
+.record-budget{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  margin:0 0 14px;padding:10px 12px;border:2px solid var(--pink);
+  border-radius:var(--hand);background:var(--pink-faint);
+  color:var(--ink-soft);font-size:.82rem;font-weight:700;text-align:center;
+}
+.record-budget b{color:var(--pink-deep);font-size:1.05rem}
+.record-budget.over{border-color:var(--danger);background:#fff0f2;color:var(--danger)}
+.record-budget.over b{color:var(--danger)}
 .num-font{font-family:"Chalkboard SE","Marker Felt",-apple-system,sans-serif}
 .pick-food{
   display:flex;align-items:center;gap:10px;width:100%;text-align:left;
@@ -281,6 +290,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 <div id="page-record" class="hidden">
   <header><div class="cat-name" id="record-title">记一餐 🐾</div></header>
   <div class="page">
+    <div class="record-budget" id="record-budget">今天还能吃 <b id="record-remain">-- kcal</b></div>
     <div id="step-pick">
       <input class="sheet-search" id="pick-search" placeholder="🔍 搜索猫粮库…">
       <div id="pick-list"></div>
@@ -788,6 +798,7 @@ function openMealEdit(m){
     $('custom-kcal').value = m.kcal;
     customTimeVal = m.timestamp;
     $('custom-time-btn').textContent = fmtTimeBtn(m.timestamp);
+    renderRecordBudget(m.kcal, m.timestamp);
   }
 }
 
@@ -804,8 +815,28 @@ $('mask').onclick = closeSheets;
 function goStep(step){
   ['step-pick','step-amount','step-custom'].forEach(s=>$(s).classList.add('hidden'));
   $(step).classList.remove('hidden');
+  if(step==='step-pick') renderRecordBudget(0, Date.now());
+  if(step==='step-custom') renderRecordBudget(parseFloat($('custom-kcal').value)||0, customTimeVal||Date.now());
 }
 let recordReturn = 'home';
+
+function renderRecordBudget(plannedKcal, timestamp){
+  const target = S.profile.targetKcal || 0;
+  let eaten = todayKcal();
+  const editing = editingMealId ? S.meals.find(x=>x.id===editingMealId) : null;
+  if(editing && todayKey(editing.timestamp)===todayKey()) eaten -= editing.kcal;
+  const appliesToday = todayKey(timestamp||Date.now())===todayKey();
+  const remain = Math.round((target-eaten-(appliesToday ? plannedKcal||0 : 0))*10)/10;
+  const box = $('record-budget');
+  box.classList.toggle('over', remain<0);
+  if(remain<0){
+    box.innerHTML = '记下这餐后将超出 <b>'+Math.abs(remain)+' kcal</b> 🙀';
+  }else if((plannedKcal||0)>0 && appliesToday){
+    box.innerHTML = '记下这餐后还能吃 <b>'+remain+' kcal</b>';
+  }else{
+    box.innerHTML = '今天还能吃 <b>'+Math.max(remain,0)+' kcal</b>';
+  }
+}
 
 function renderPickList(q, showAll){
   const box = $('pick-list'); box.innerHTML='';
@@ -917,6 +948,7 @@ function updatePreview(){
   $('preview-kcal').textContent = Math.round(kcal*10)/10;
   $('preview-formula').textContent = formula;
   if(bowlPct!=null) updateBowl(bowlPct, kcal);
+  renderRecordBudget(kcal, mealTimeVal||Date.now());
 }
 /* 大数字联动 */
 function updateBowl(pct, kcal){
@@ -950,7 +982,8 @@ $('back-pick').onclick = ()=>goStep('step-pick');
 $('back-pick2').onclick = ()=>goStep('step-pick');
 $('back-home-1').onclick = ()=>switchTab('home');
 $('btn-food-add-pick').onclick = ()=>{ recordReturn='pick'; openFoodForm(null); };
-$('btn-custom').onclick = ()=>{ goStep('step-custom'); customTimeVal = Date.now(); $('custom-time-btn').textContent = '现在 🐾'; };
+$('btn-custom').onclick = ()=>{ customTimeVal = Date.now(); $('custom-kcal').value=''; $('custom-time-btn').textContent = '现在 🐾'; goStep('step-custom'); };
+$('custom-kcal').oninput = ()=>renderRecordBudget(parseFloat($('custom-kcal').value)||0, customTimeVal||Date.now());
 
 $('btn-save-meal').onclick = ()=>{
   if(!pickedFood) return;
@@ -1417,8 +1450,8 @@ $('min-minus').onclick = ()=>stepMin(-5);
 $('min-plus').onclick = ()=>stepMin(5);
 $('time-now').onclick = ()=>{ timeSel=Date.now(); tcalCursor=new Date(timeSel); renderTcal(); updateTimeVals(); };
 $('time-ok').onclick = ()=>{
-  if(timeTarget==='meal'){ mealTimeVal=timeSel; $('meal-time-btn').textContent = fmtTimeBtn(timeSel); }
-  else if(timeTarget==='custom'){ customTimeVal=timeSel; $('custom-time-btn').textContent = fmtTimeBtn(timeSel); }
+  if(timeTarget==='meal'){ mealTimeVal=timeSel; $('meal-time-btn').textContent = fmtTimeBtn(timeSel); updatePreview(); }
+  else if(timeTarget==='custom'){ customTimeVal=timeSel; $('custom-time-btn').textContent = fmtTimeBtn(timeSel); renderRecordBudget(parseFloat($('custom-kcal').value)||0, customTimeVal); }
   else { weightDateVal=timeSel; $('w-date-btn').textContent = fmtDayBtn(timeSel); }
   closeSheets();
 };
