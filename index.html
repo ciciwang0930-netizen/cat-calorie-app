@@ -404,6 +404,11 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
     <button class="btn btn-primary" style="flex:1" id="btn-food-add">＋ 新增</button>
     <button class="btn" style="flex:1" id="btn-food-batch">📋 批量录入</button>
   </div>
+  <div class="row2" style="padding:8px 20px 0">
+    <button class="btn btn-ghost" style="flex:1" id="btn-food-export">📤 导出猫粮库</button>
+    <button class="btn btn-ghost" style="flex:1" id="btn-food-import">📥 导入猫粮库</button>
+  </div>
+  <input type="file" id="food-import-file" accept=".json,application/json" class="hidden">
   <div id="food-list"></div>
 </div>
 
@@ -1159,6 +1164,67 @@ $('food-search-clear').onclick = ()=>{
   $('food-search').focus();
 };
 
+const FOOD_EXPORT_FIELDS = ['name','type','kcalPerPack','kcalPer100g','spec','netGrams','grossGrams','countMode','unit'];
+function downloadJson(data, filename){
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function foodExportData(f){
+  const out = {};
+  FOOD_EXPORT_FIELDS.forEach(k=>{ if(f[k]!=null && f[k]!=='') out[k]=f[k]; });
+  return out;
+}
+function importFoodLibrary(data){
+  if(data.type!=='neko-food-library' || !Array.isArray(data.foods)) throw 0;
+  const incoming=data.foods.map(raw=>{
+    if(!raw || typeof raw.name!=='string' || !raw.name.trim() || typeof raw.type!=='string') throw 0;
+    const pack=Number(raw.kcalPerPack), per100=Number(raw.kcalPer100g);
+    if(!(pack>0) && !(per100>0)) throw 0;
+    const f={};
+    FOOD_EXPORT_FIELDS.forEach(k=>{ if(raw[k]!=null && raw[k]!=='') f[k]=raw[k]; });
+    f.name=raw.name.trim(); f.type=raw.type.trim();
+    f.kcalPerPack=pack>0?pack:null; f.kcalPer100g=per100>0?per100:null;
+    if(f.netGrams!=null) f.netGrams=Number(f.netGrams)||null;
+    if(f.grossGrams!=null) f.grossGrams=Number(f.grossGrams)||null;
+    fillWeights(f);
+    return f;
+  });
+  let added=0, updated=0;
+  const byName=new Map(S.foods.map(f=>[f.name.trim().toLowerCase(),f]));
+  incoming.forEach(f=>{
+    const key=f.name.toLowerCase(), existing=byName.get(key);
+    if(existing){
+      const id=existing.id, useCount=existing.useCount||0;
+      FOOD_EXPORT_FIELDS.forEach(k=>delete existing[k]);
+      Object.assign(existing,f,{id,useCount}); updated++;
+    }else{
+      const created=Object.assign({id:uid(),useCount:0},f);
+      S.foods.push(created); byName.set(key,created); added++;
+    }
+  });
+  return {added,updated};
+}
+$('btn-food-export').onclick = ()=>{
+  downloadJson({type:'neko-food-library',version:1,exportedAt:new Date().toISOString(),foods:S.foods.map(foodExportData)}, 'neko-foods-'+todayKey()+'.json');
+  toast('猫粮库已导出 📤');
+};
+$('btn-food-import').onclick = ()=>$('food-import-file').click();
+$('food-import-file').onchange = e=>{
+  const file=e.target.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const data=JSON.parse(r.result);
+      const {added,updated}=importFoodLibrary(data);
+      save(); renderFoods(); pawRain(); toast('导入完成：新增 '+added+'，更新 '+updated+' 🎉');
+    }catch(err){ toast('文件格式不对，没有修改猫粮库'); }
+    e.target.value='';
+  };
+  r.readAsText(file);
+};
+
 function openFoodForm(f){
   editingFoodId = f ? f.id : null;
   $('food-form-title').textContent = f ? '编辑猫粮 ✏️' : '新增猫粮 🍖';
@@ -1377,11 +1443,7 @@ $('btn-save-profile').onclick = ()=>{
 
 /* 导入导出 */
 $('btn-export').onclick = ()=>{
-  const blob = new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = '喵热量备份-'+todayKey()+'.json';
-  a.click(); URL.revokeObjectURL(a.href);
+  downloadJson(S,'喵热量备份-'+todayKey()+'.json');
   toast('已导出 📤');
 };
 $('btn-import').onclick = ()=>$('import-file').click();
