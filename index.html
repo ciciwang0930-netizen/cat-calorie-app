@@ -320,6 +320,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
       <div id="weigh-zone" class="hidden">
         <div class="sub-title" style="margin:10px 0 8px">── 或称个重 ⚖️ ──</div>
         <div class="field"><label id="w-remain-label">新开一包 → 还剩 (g)</label><input id="w-remain" type="number" inputmode="decimal" placeholder="如 50"></div>
+        <div class="field"><label>本次吃了多少克 (g)</label><input id="w-eaten" type="number" inputmode="decimal" placeholder="如 30"></div>
         <div class="field"><label>吃剩饭 → 吃前 / 吃后 (g)</label>
           <div class="row2"><input id="w-before" type="number" inputmode="decimal" placeholder="吃前"><input id="w-after" type="number" inputmode="decimal" placeholder="吃后"></div>
         </div>
@@ -889,14 +890,21 @@ function openAmount(prefill){
   $('bowl-hero').classList.toggle('hidden', !isPack || isCount);
   $('kcal-preview-zone').classList.toggle('hidden', isPack && !isCount);
   if(isPack && !isCount){
-    $('w-remain').value=''; $('w-before').value=''; $('w-after').value='';
+    $('w-remain').value=''; $('w-eaten').value=''; $('w-before').value=''; $('w-after').value='';
     $('w-remain-label').textContent = '新开一包 → 还剩 (g)' + (pickedFood.grossGrams!=null ? '（整袋 '+pickedFood.grossGrams+'g）' : '（未录毛重，先去猫粮库补）');
   }
   if(prefill){   // 编辑模式：预填原值
     mealTimeVal = prefill.timestamp;
     $('meal-time-btn').textContent = fmtTimeBtn(prefill.timestamp);
     if(isCount){ setCnt(prefill.count||1); $('cnt-slider').value=prefill.count||1; }
-    else if(isPack){ setPct(prefill.percent||100); $('pct-slider').value=prefill.percent||100; }
+    else if(isPack){
+      if(prefill.wmode==='direct' && prefill.grams){
+        $('w-eaten').value=prefill.grams;
+        updatePreview();
+      }else{
+        setPct(prefill.percent||100); $('pct-slider').value=prefill.percent||100;
+      }
+    }
     else { $('grams-input').value = prefill.grams||''; updatePreview(); }
   }else{
     $('meal-time-btn').textContent = '现在 🐾'; mealTimeVal = Date.now();
@@ -908,6 +916,9 @@ function openAmount(prefill){
 
 function setPct(p){
   curPct = p;
+  if(pickedFood && pickedFood.kcalPerPack!=null && !pickedFood.countMode){
+    $('w-remain').value=''; $('w-eaten').value=''; $('w-before').value=''; $('w-after').value='';
+  }
   $('pct-val').textContent = p+'%';
   document.querySelectorAll('.big-pct').forEach(b=>b.classList.toggle('on', +b.dataset.pct===p));
   updatePreview();
@@ -933,7 +944,8 @@ function updatePreview(){
         const pct = w.eaten/net*100;
         kcal = pickedFood.kcalPerPack * pct/100;
         bowlPct = Math.min(pct,100);
-        formula = (w.mode==='newpack'?'新开一包':'剩饭')+'：'+Math.round(w.eaten*10)/10+'g ≈ '+Math.round(pct*10)/10+'%';
+        const modeLabel = w.mode==='newpack' ? '新开一包' : w.mode==='direct' ? '直接记录' : '剩饭';
+        formula = modeLabel+'：'+Math.round(w.eaten*10)/10+'g ≈ '+Math.round(pct*10)/10+'%';
       }
     }else{
       kcal = pickedFood.kcalPerPack * curPct/100;
@@ -955,9 +967,10 @@ function updateBowl(pct, kcal){
   $('bowl-pct').textContent = Math.round(pct)+'%';
   $('bowl-kcal').textContent = Math.round(kcal*10)/10;
 }
-/* 称重法：填了吃前+吃后 → 剩饭模式；只填剩余 → 新开一包模式；都没填 → 按比例 */
+/* 称重法：直接克数 / 吃前吃后 / 新开一包剩余；都没填则按比例 */
 function detectWeigh(){
-  const before = parseFloat($('w-before').value), after = parseFloat($('w-after').value), remain = parseFloat($('w-remain').value);
+  const eaten = parseFloat($('w-eaten').value), before = parseFloat($('w-before').value), after = parseFloat($('w-after').value), remain = parseFloat($('w-remain').value);
+  if(!isNaN(eaten)) return {mode:'direct', eaten};
   if(!isNaN(before) && !isNaN(after)) return {mode:'leftover', eaten:before-after};
   if(!isNaN(remain) && pickedFood.grossGrams!=null) return {mode:'newpack', eaten:pickedFood.grossGrams-remain};
   return null;
@@ -968,7 +981,13 @@ document.querySelectorAll('.big-pct[data-cnt]').forEach(b=>{ b.onclick = ()=>{ $
 $('cnt-slider').oninput = e=>setCnt(+e.target.value);
 $('pct-slider').oninput = e=>setPct(+e.target.value);
 $('grams-input').oninput = updatePreview;
-['w-remain','w-before','w-after'].forEach(id=>{ $(id).oninput = updatePreview; });
+$('w-eaten').oninput = ()=>{
+  $('w-remain').value=''; $('w-before').value=''; $('w-after').value=''; updatePreview();
+};
+$('w-remain').oninput = ()=>{
+  $('w-eaten').value=''; $('w-before').value=''; $('w-after').value=''; updatePreview();
+};
+['w-before','w-after'].forEach(id=>{ $(id).oninput = ()=>{ $('w-eaten').value=''; $('w-remain').value=''; updatePreview(); }; });
 
 $('btn-add').onclick = ()=>{
   pickedFood=null; editingMealId=null;
@@ -1004,7 +1023,8 @@ $('btn-save-meal').onclick = ()=>{
       if(!net){ toast('这个食物缺净重，去猫粮库补一下'); return; }
       const pct = w.eaten/net*100;
       if(pct>105){ toast('超出整包净重了，是不是称错了'); return; }
-      meal.percent = Math.round(pct*10)/10;
+      if(w.mode==='direct') meal.grams = Math.round(w.eaten*10)/10;
+      else meal.percent = Math.round(pct*10)/10;
       meal.wmode = w.mode;
       kcal = pickedFood.kcalPerPack * pct/100;
     }else{
