@@ -159,6 +159,16 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   line-height:28px;text-align:center;
 }
 .search-clear:active{background:var(--pink);color:#fff}
+#page-foods header{position:relative}
+.food-menu-trigger{background:none}
+.food-menu{
+  position:absolute;right:20px;top:calc(42px + env(safe-area-inset-top));z-index:75;
+  width:174px;padding:6px;background:#fff;border:2px solid var(--ink);
+  border-radius:var(--hand2);box-shadow:3px 4px 0 rgba(107,74,86,.15);
+}
+.food-menu button{display:block;width:100%;padding:10px 12px;text-align:left;font-size:.82rem;font-weight:700;border-radius:12px}
+.food-menu button+button{border-top:1.5px dashed var(--pink);border-radius:0 0 12px 12px}
+.food-menu button:active{background:var(--pink-faint)}
 .food-group-title{margin:16px 20px 6px;font-size:.8rem;font-weight:700;color:var(--ink-soft)}
 .food-item{
   margin:0 20px 10px;background:var(--card);border:2px solid var(--ink);border-radius:var(--hand2);
@@ -395,7 +405,14 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
 <!-- ═══════════ 猫粮库 ═══════════ -->
 <div id="page-foods" class="hidden">
-  <header><div class="cat-name"><img class="page-ico" src="tab-foods.png" alt=""> 猫粮库</div><div class="date" id="food-count"></div></header>
+  <header>
+    <div class="cat-name"><img class="page-ico" src="tab-foods.png" alt=""> 猫粮库</div>
+    <button class="date food-menu-trigger" id="food-menu-trigger" aria-label="猫粮库导入导出菜单"><span id="food-count"></span></button>
+    <div class="food-menu hidden" id="food-menu">
+      <button id="btn-food-export">📤 导出猫粮库</button>
+      <button id="btn-food-import">📥 导入猫粮库</button>
+    </div>
+  </header>
   <div class="search-row">
     <input id="food-search" placeholder="🔍 搜一搜…">
     <button class="search-clear hidden" id="food-search-clear" aria-label="清除搜索">×</button>
@@ -403,10 +420,6 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   <div class="row2" style="padding:10px 20px 0">
     <button class="btn btn-primary" style="flex:1" id="btn-food-add">＋ 新增</button>
     <button class="btn" style="flex:1" id="btn-food-batch">📋 批量录入</button>
-  </div>
-  <div class="row2" style="padding:8px 20px 0">
-    <button class="btn btn-ghost" style="flex:1" id="btn-food-export">📤 导出猫粮库</button>
-    <button class="btn btn-ghost" style="flex:1" id="btn-food-import">📥 导入猫粮库</button>
   </div>
   <input type="file" id="food-import-file" accept=".json,application/json" class="hidden">
   <div id="food-list"></div>
@@ -1163,6 +1176,10 @@ $('food-search-clear').onclick = ()=>{
   renderFoods();
   $('food-search').focus();
 };
+$('food-menu-trigger').onclick = ()=>$('food-menu').classList.toggle('hidden');
+document.addEventListener('pointerdown', e=>{
+  if(!e.target.closest('#food-menu') && !e.target.closest('#food-menu-trigger')) $('food-menu').classList.add('hidden');
+});
 
 const FOOD_EXPORT_FIELDS = ['name','type','kcalPerPack','kcalPer100g','spec','netGrams','grossGrams','countMode','unit'];
 function downloadJson(data, filename){
@@ -1207,10 +1224,11 @@ function importFoodLibrary(data){
   return {added,updated};
 }
 $('btn-food-export').onclick = ()=>{
+  $('food-menu').classList.add('hidden');
   downloadJson({type:'neko-food-library',version:1,exportedAt:new Date().toISOString(),foods:S.foods.map(foodExportData)}, 'neko-foods-'+todayKey()+'.json');
   toast('猫粮库已导出 📤');
 };
-$('btn-food-import').onclick = ()=>$('food-import-file').click();
+$('btn-food-import').onclick = ()=>{ $('food-menu').classList.add('hidden'); $('food-import-file').click(); };
 $('food-import-file').onchange = e=>{
   const file=e.target.files[0]; if(!file)return;
   const r=new FileReader();
