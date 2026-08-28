@@ -153,6 +153,12 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   flex:1;padding:11px 16px;border:2px solid var(--ink);border-radius:var(--hand);
   background:#fff;outline:none;
 }
+.search-clear{
+  width:44px;flex:0 0 44px;border:2px solid var(--ink);border-radius:50%;
+  background:var(--pink-pale);color:var(--ink);font-size:1.25rem;font-weight:800;
+  box-shadow:2px 3px 0 rgba(107,74,86,.15);
+}
+.search-clear:active{transform:translateY(2px);box-shadow:none}
 .food-group-title{margin:16px 20px 6px;font-size:.8rem;font-weight:700;color:var(--ink-soft)}
 .food-item{
   margin:0 20px 10px;background:var(--card);border:2px solid var(--ink);border-radius:var(--hand2);
@@ -360,6 +366,7 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
   <header><div class="cat-name"><img class="page-ico" src="tab-foods.png" alt=""> 猫粮库</div><div class="date" id="food-count"></div></header>
   <div class="search-row">
     <input id="food-search" placeholder="🔍 搜一搜…">
+    <button class="search-clear hidden" id="food-search-clear" aria-label="清除搜索">×</button>
   </div>
   <div class="row2" style="padding:10px 20px 0">
     <button class="btn btn-primary" style="flex:1" id="btn-food-add">＋ 新增</button>
@@ -1076,6 +1083,7 @@ let editingFoodId = null;
 
 function renderFoods(){
   const q = $('food-search').value.trim().toLowerCase();
+  $('food-search-clear').classList.toggle('hidden', !q);
   $('food-count').textContent = S.foods.length+' 种';
   const box = $('food-list'); box.innerHTML='';
   const groups = {};
@@ -1113,6 +1121,11 @@ function renderFoods(){
   }
 }
 $('food-search').oninput = renderFoods;
+$('food-search-clear').onclick = ()=>{
+  $('food-search').value='';
+  renderFoods();
+  $('food-search').focus();
+};
 
 function openFoodForm(f){
   editingFoodId = f ? f.id : null;
