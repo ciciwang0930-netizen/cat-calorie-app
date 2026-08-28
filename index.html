@@ -931,6 +931,19 @@ function renderPickList(q, showAll){
   }
 }
 
+function mealWeighPrefill(meal, food){
+  const saved=meal.weighData;
+  if(saved && saved.mode==='direct' && saved.eaten>0) return {mode:'direct',eaten:saved.eaten};
+  if(saved && saved.mode==='newpack' && saved.remain>=0) return {mode:'newpack',remain:saved.remain};
+  if(saved && saved.mode==='leftover' && saved.before>=0 && saved.after>=0) return {mode:'leftover',before:saved.before,after:saved.after};
+  // 兼容旧记录：过去只保存了模式和百分比，没有保存原始称重数值
+  if(meal.wmode==='direct' && meal.grams>0) return {mode:'direct',eaten:meal.grams};
+  const eaten = meal.percent>0 && food.netGrams>0 ? food.netGrams*meal.percent/100 : 0;
+  if(meal.wmode==='newpack' && eaten>0 && food.grossGrams!=null) return {mode:'newpack',remain:Math.round((food.grossGrams-eaten)*10)/10};
+  if(meal.wmode==='leftover' && eaten>0) return {mode:'direct',eaten:Math.round(eaten*10)/10};
+  return null;
+}
+
 function openAmount(prefill){
   goStep('step-amount');
   $('amount-title').textContent = pickedFood.name + ' 吃了多少？';
@@ -955,8 +968,11 @@ function openAmount(prefill){
     $('meal-time-btn').textContent = fmtTimeBtn(prefill.timestamp);
     if(isCount){ setCnt(prefill.count||1); $('cnt-slider').value=prefill.count||1; }
     else if(isPack){
-      if(prefill.wmode==='direct' && prefill.grams){
-        $('w-eaten').value=prefill.grams;
+      const weighPrefill=mealWeighPrefill(prefill,pickedFood);
+      if(weighPrefill){
+        if(weighPrefill.mode==='direct') $('w-eaten').value=weighPrefill.eaten;
+        else if(weighPrefill.mode==='newpack') $('w-remain').value=weighPrefill.remain;
+        else { $('w-before').value=weighPrefill.before; $('w-after').value=weighPrefill.after; }
         updatePreview();
       }else{
         setPct(prefill.percent||100); $('pct-slider').value=prefill.percent||100;
@@ -1027,9 +1043,9 @@ function updateBowl(pct, kcal){
 /* 称重法：直接克数 / 吃前吃后 / 新开一包剩余；都没填则按比例 */
 function detectWeigh(){
   const eaten = parseFloat($('w-eaten').value), before = parseFloat($('w-before').value), after = parseFloat($('w-after').value), remain = parseFloat($('w-remain').value);
-  if(!isNaN(eaten)) return {mode:'direct', eaten};
-  if(!isNaN(before) && !isNaN(after)) return {mode:'leftover', eaten:before-after};
-  if(!isNaN(remain) && pickedFood.grossGrams!=null) return {mode:'newpack', eaten:pickedFood.grossGrams-remain};
+  if(!isNaN(eaten)) return {mode:'direct', eaten, raw:{mode:'direct',eaten}};
+  if(!isNaN(before) && !isNaN(after)) return {mode:'leftover', eaten:before-after, raw:{mode:'leftover',before,after}};
+  if(!isNaN(remain) && pickedFood.grossGrams!=null) return {mode:'newpack', eaten:pickedFood.grossGrams-remain, raw:{mode:'newpack',remain}};
   return null;
 }
 
@@ -1067,7 +1083,7 @@ $('btn-save-meal').onclick = ()=>{
   const editing = editingMealId ? S.meals.find(x=>x.id===editingMealId) : null;
   const meal = editing || {id:uid(), foodId:pickedFood.id, customName:null, percent:null, grams:null, count:null, kcal:0};
   meal.foodId = pickedFood.id;
-  meal.percent = null; meal.grams = null; meal.count = null;
+  meal.percent = null; meal.grams = null; meal.count = null; meal.wmode = null; meal.weighData = null;
   meal.timestamp = mealTimeVal || Date.now();
   if(pickedFood.countMode){
     meal.count = curCnt;
@@ -1083,6 +1099,7 @@ $('btn-save-meal').onclick = ()=>{
       if(w.mode==='direct') meal.grams = Math.round(w.eaten*10)/10;
       else meal.percent = Math.round(pct*10)/10;
       meal.wmode = w.mode;
+      meal.weighData = w.raw;
       kcal = pickedFood.kcalPerPack * pct/100;
     }else{
       meal.percent = curPct;
