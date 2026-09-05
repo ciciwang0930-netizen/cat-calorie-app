@@ -1,17 +1,30 @@
-const CACHE = 'neko-kcal-v56';
+const CACHE = 'neko-kcal-v57';
 const ASSETS = ['./index.html', './manifest.json', './icon-180.png', './icon-512.png', './avatar.png', './tab-home.png', './tab-foods.png', './icons/cat.png', './icons/fish.png', './icons/can.png', './icons/bowl.png', './icons/paw.png', './icons/ribbon.png', './icons/lollipop.png', './icons/pouch.png', './icons/strip.png', './icons/scale.png', './icons/calendar.png', './'];
+const REQUIRED_ASSETS = ASSETS.filter(asset=>asset!=='./');
 
 self.addEventListener('install', e => {
-  // allSettled：单个资源失败（CDN 抖动/404）不再拖垮整个 SW 安装
-  e.waitUntil(
-    caches.open(CACHE)
-      .then(c => Promise.allSettled(ASSETS.map(a => c.add(a))))
-      .then(() => self.skipWaiting())
-  );
+  e.waitUntil((async()=>{
+    const cache = await caches.open(CACHE);
+    // 原子更新：页面和全部图标都下载成功后才激活，避免出现半套资源。
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(),20000);
+    try{
+      const required = await Promise.all(REQUIRED_ASSETS.map(async asset=>{
+        const response = await fetch(asset,{cache:'no-store',signal:controller.signal});
+        if(!response.ok) throw new Error('Required asset download failed: '+asset);
+        return [asset,response];
+      }));
+      for(const [asset,response] of required) await cache.put(asset,response);
+    }finally{ clearTimeout(timer); }
+    await self.skipWaiting();
+  })());
+});
+self.addEventListener('message',e=>{
+  if(e.data?.type==='GET_VERSION') e.ports[0]?.postMessage({version:CACHE.replace('neko-kcal-','')});
 });
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('neko-kcal-') && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -19,10 +32,17 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
-  const isHtml = req.mode === 'navigate' || req.url.endsWith('.html') || req.url.endsWith('/');
+  const url = new URL(req.url);
+  // 显式检查更新和 SW 版本请求不得回落到旧缓存。
+  if(req.cache==='no-store' || url.pathname.endsWith('/sw.js')){
+    e.respondWith(fetch(req,{cache:'no-store'}));
+    return;
+  }
+  const isHtml = req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
   if (isHtml) {
     e.respondWith(
-      fetch(req).then(resp => {
+      fetch(req,{cache:'no-store'}).then(resp => {
+        if(!resp.ok) throw new Error('Page unavailable');
         const copy = resp.clone();
         caches.open(CACHE).then(c => c.put(req, copy));
         return resp;

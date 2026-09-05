@@ -522,8 +522,9 @@ nav button.on .ico{filter:none;opacity:1;transform:scale(1.12)}
 
     <div class="card">
       <h3>关于</h3>
-      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v40</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
+      <p style="font-size:.78rem;color:var(--ink-soft);line-height:1.8">喵热量 <b id="ver-tag">v57</b> · 单文件离线 PWA<br>手绘少女粉 · 为一只猫而建 🐾</p>
       <button class="btn btn-block" id="btn-update" style="margin-top:10px">🔄 检查更新</button>
+      <p id="update-status" role="status" style="font-size:.78rem;color:var(--ink-soft);margin-top:8px;line-height:1.7"></p>
     </div>
   </div>
 </div>
@@ -1630,22 +1631,76 @@ function updateTimeVals(){
 
 /* ═══════════════ 启动 ═══════════════ */
 if('serviceWorker' in navigator && location.protocol!=='file:'){
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
-  // 每次启动主动检查 SW 更新
-  navigator.serviceWorker.getRegistration().then(r=>{ if(r) r.update(); }).catch(()=>{});
+  navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
 }
-/* 版本号唯一事实来源 = sw.js 的 CACHE 名（neko-kcal-vN），页面启动时实时同步，防止两处维护漂移 */
-fetch('sw.js', {cache:'no-store'}).then(r=>r.text()).then(t=>{
-  const m = t.match(/neko-kcal-(v\d+)/);
-  if(m && $('ver-tag')) $('ver-tag').textContent = m[1];
-}).catch(()=>{});
-$('btn-update').onclick = ()=>{
-  toast('检查更新中…');
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistration().then(r=>{
-      if(r) return r.update();
-    }).then(()=>setTimeout(()=>location.reload(), 800)).catch(()=>location.reload());
-  }else location.reload();
+// 页面版本随 HTML 发布，不能用服务器版本冒充当前运行版本。
+function waitForAppWorker(reg){
+  return new Promise((resolve,reject)=>{
+    const worker = reg.installing || reg.waiting || reg.active;
+    if(!worker){ reject(new Error('新版尚未安装，请稍后重试')); return; }
+    const timer = setTimeout(()=>finish(new Error('更新超时，请检查网络后重试')), 25000);
+    function finish(error){
+      clearTimeout(timer);
+      worker.removeEventListener('statechange',check);
+      navigator.serviceWorker.removeEventListener('controllerchange',check);
+      error ? reject(error) : resolve(worker);
+    }
+    function check(){
+      if(worker.state==='redundant') finish(new Error('更新安装失败，请稍后重试'));
+      else if(worker.state==='activated' && navigator.serviceWorker.controller===worker) finish();
+    }
+    worker.addEventListener('statechange',check);
+    navigator.serviceWorker.addEventListener('controllerchange',check);
+    check();
+  });
+}
+function appWorkerVersion(worker){
+  return new Promise((resolve,reject)=>{
+    const channel = new MessageChannel();
+    const timer = setTimeout(()=>finish(new Error('旧版仍在运行，请稍后再检查更新')),5000);
+    function finish(error,version){
+      clearTimeout(timer); channel.port1.close();
+      error ? reject(error) : resolve(version);
+    }
+    channel.port1.onmessage = e=>finish(null,e.data.version);
+    worker.postMessage({type:'GET_VERSION'},[channel.port2]);
+  });
+}
+async function checkAppUpdate(signal){
+  if(!('serviceWorker' in navigator)) throw new Error('当前打开方式不支持更新，请联网重新打开 App');
+  const reg = await navigator.serviceWorker.register('sw.js',{updateViaCache:'none'});
+  await reg.update();
+  const worker = await waitForAppWorker(reg);
+  const version = await appWorkerVersion(worker);
+  const response = await fetch('index.html',{cache:'no-store',signal});
+  if(!response.ok) throw new Error('新版页面下载失败，请稍后重试');
+  const doc = new DOMParser().parseFromString(await response.text(),'text/html');
+  const pageVersion = doc.getElementById('ver-tag')?.textContent;
+  if(!version || version!==pageVersion) throw new Error('新版尚未同步完成，请稍后重试');
+  return version;
+}
+$('btn-update').onclick = async ()=>{
+  const button = $('btn-update'), status = $('update-status');
+  button.disabled = true; button.textContent = '正在检查更新…';
+  status.textContent = '正在联网检查并安装更新，请保持 App 打开。';
+  const controller = new AbortController();
+  let timer;
+  try{
+    const timeout = new Promise((_,reject)=>{ timer=setTimeout(()=>{
+      controller.abort(); reject(new Error('更新超时，请检查网络后重试'));
+    },35000); });
+    const version = await Promise.race([checkAppUpdate(controller.signal),timeout]);
+    if(version===$('ver-tag').textContent){ status.textContent='当前已是最新版 '+version; }
+    else{
+      status.textContent='更新已安装，正在打开 '+version+'…';
+      location.replace('index.html?updated='+encodeURIComponent(version));
+    }
+  }catch(error){
+    status.textContent = navigator.onLine ? (error instanceof TypeError ? '连接失败，请检查网络后重试' : error.message) : '当前无法联网，更新未完成。联网后请重试。';
+  }finally{
+    clearTimeout(timer); controller.abort();
+    button.disabled=false; button.textContent='🔄 检查更新';
+  }
 };
 $('date-prev').onclick = ()=>{ const d=new Date(viewDate+'T12:00:00'); d.setDate(d.getDate()-1); viewDate=todayKey(d.getTime()); renderHome(); };
 $('date-next').onclick = ()=>{ if(viewDate===todayKey())return; const d=new Date(viewDate+'T12:00:00'); d.setDate(d.getDate()+1); viewDate=todayKey(d.getTime()); renderHome(); };
